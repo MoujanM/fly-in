@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
+
 class Zones(Enum):
     """Mapping of zones with their costs."""
     RES = ("restricted", 2)
@@ -15,17 +16,20 @@ class Colours(Enum):
     """Optional, for visual representations."""
     pass
 
+
 @dataclass
 class Hub:
+    kind: str
     name: str
     x: int
     y: int
-    # colour: Optional[Colours] 
-    # zone: Optional[Zones]
-    # capacity: Optional[int]
+    zone: str | None
+    color: str | None
+    max_drones: int
+
 
 @dataclass
 class Edge:
     hub_a: Hub
     hub_b: Hub
-    # capacity: Optional[int]
+    max_capacity: int
