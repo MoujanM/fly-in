@@ -1,5 +1,6 @@
-from models import Hub, Edge, GraphModel
+from src.models import Hub, Edge, GraphModel
 import re
+from typing import cast, Literal
 
 # constant mod variables for efficient parsing
 # naming captured groups using (?P<name>pattern)
@@ -37,7 +38,7 @@ class Parser():
         Function that takes a string. tries to match with hub_pattern.
         if there is a match, returns Hub object.
         """
-        m: re.Match = HUB_PATTERN.match(hub_str)
+        m: re.Match | None = HUB_PATTERN.match(hub_str)
         if not m:
             raise Exception("Error parsing hub line - check input file.")
         metadata: dict[str, str] = {}
@@ -50,7 +51,7 @@ class Parser():
                 name=m.group('name'),
                 x=int(m.group('x')),
                 y=int(m.group('y')),
-                zone=metadata.get('zone'),
+                zone=cast(Literal['normal', 'restricted', 'priority', 'blocked'], metadata.get('zone', 'normal')),
                 color=metadata.get('color'),
                 max_drones=int(metadata.get('max_drones', 1)))
             return new_hub
@@ -58,7 +59,7 @@ class Parser():
             raise e
 
     def parse_return_edge(self, edge_str) -> Edge:
-        m: re.Match = EDGE_PATTERN.match(edge_str)
+        m: re.Match | None = EDGE_PATTERN.match(edge_str)
         if not m:
             raise Exception("Error parsing connection - check input file.")
 
@@ -67,12 +68,14 @@ class Parser():
         try:
             hub_a: Hub = hub_name_lookup[m.group('hub_a')]
             hub_b: Hub = hub_name_lookup[m.group('hub_b')]
+            edge_name: str = f"{hub_a.name}-{hub_b.name}"
 
             metadata: dict[str, str] = {}
             if m.group('meta'):
                 metadata = self.parse_meta(m.group('meta'))
 
             new_edge = Edge(
+                name=edge_name,
                 hub_a=hub_a,
                 hub_b=hub_b,
                 max_capacity=int(metadata.get('max_link_capacity', 1))
@@ -81,14 +84,13 @@ class Parser():
         except Exception as e:
             raise e
 
-    def _read_to_dict(self) -> dict[str, int | list[Hub | Edge]]:
+    def _read_values(self) -> tuple[int, list[Hub], list[Edge]]:
         """function to read and return the following:
         drone_count;
         all hubs (vertices) marking start/end;
         all connections (edges)
         """
-        nb_agents: int = None
-        graph_dict: dict[str, int | list[Hub | Edge]] = {}
+        nb_agents: int = 0
         with open(self.filename) as f:
             for line in f:
                 if line.startswith("#") or line.isspace():
@@ -102,18 +104,16 @@ class Parser():
                     if self.parse_return_edge(line):
                         self._edges.append(self.parse_return_edge(line))
 
-        graph_dict.update({'nb_agents': nb_agents,
-                           'hubs': self._hubs,
-                           'edges': self._edges})
-        return graph_dict
+        return nb_agents, self._hubs, self._edges
 
-    def get_graph(self) -> GraphModel:
-        graph_dict = self._read_to_dict()
+    def get_graph(self) -> 'GraphModel':
+        graph_vals = self._read_values()
         try:
-            graph = GraphModel(**graph_dict)
-            return graph
+            return GraphModel(nb_agents=graph_vals[0],
+                              hubs=graph_vals[1],
+                              edges=graph_vals[2])
         except Exception as e:
-            print(e)
+            raise(e)
 
 
 if __name__ == "__main__":
