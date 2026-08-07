@@ -81,10 +81,9 @@ class CBS(PathFinder):
                             )
         return None
 
-
     def solve(self) -> CBSResult | None:
         # orchestrator - actual implementation
-        
+
         root_paths, root_cost_pa, root_edge_occ = self._all_paths([])
         root: CBSNode = CBSNode(
             constraints=[],

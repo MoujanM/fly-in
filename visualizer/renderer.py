@@ -11,8 +11,8 @@ class Renderer():
     These are passed to child classes for easy & fast drawing.
     """
     def __init__(self, graph: GraphModel) -> None:
-        self._scale: int = 120
-        self._margin: int = 40
+        self._scale: int = 150
+        self._margin: int = 100
 
         self.h: list[Hub] = graph.hubs
         self.e: list[Edge] = graph.edges
@@ -26,7 +26,7 @@ class Renderer():
         min_size is defined, else using graph to determine width & height.
         """
         # individually defined to play with later
-        min_size: int = 600
+        min_size: int = 400
         span_x: int = max(h.x for h in self.h) - min(h.x for h in self.h)
         span_y: int = max(h.y for h in self.h) - min(h.y for h in self.h)
 
@@ -37,8 +37,7 @@ class Renderer():
 
     def _compute_offset(self) -> tuple[int, int]:
         """
-        Function computes adaptive scalar for given ds size.
-        returns this value as well as x, y offset values. 
+        Function to compute where in the screen to put drawings.
         """
         min_x: int = min(h.x for h in self.h)
         max_x: int = max(h.x for h in self.h)
@@ -52,7 +51,7 @@ class Renderer():
         span_y: int = max_y - min_y
 
         offset_x: int = self._margin + (-min_x * self._scale)
-        offset_y: int = self._margin + (-min_y * self._scale)
+        offset_y: int = screen_h // 2 + self._margin + (-min_y * self._scale)
         
         return (offset_x, offset_y)
     

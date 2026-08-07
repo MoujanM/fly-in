@@ -1,11 +1,11 @@
 
 from pydantic import BaseModel, Field, model_validator
-from typing import Literal, Optional
+from typing import Literal
 from enum import Enum
 from dataclasses import dataclass
 
-# Group 1 : Graph-related pydantic models
 
+# Group 1 : Graph-related pydantic models
 class Hub(BaseModel):
     kind: Literal['start_hub', 'hub', 'end_hub']
     name: str
@@ -44,8 +44,8 @@ class GraphModel(BaseModel):
             raise ValueError("Error building graph - check end_hub")
         return self
 
-# Group 2 : Path-finding structs
 
+# Group 2 : Path-finding structs
 class ZoneCost(Enum):
     """Mapping of zones with their effective costs."""
     NORM = ("normal", 2)
