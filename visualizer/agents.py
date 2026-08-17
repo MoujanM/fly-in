@@ -1,44 +1,44 @@
 import pygame
-
 from src.models import GraphModel, Hub, Edge, PathStep
 from visualizer.renderer import Renderer
 from visualizer.map import Map
 
-
-class Blit(Map):
+class Agents(Renderer):
     """
     Class responsible for adding specs on the graph.
     These will reflect turn changes and include:
         - turn number header
-        - hub/edge name; max. capacity
         - number of agents (drones) at position per turn.
-    Inherits from Renderer.
+    Inherits from Map.
     """
-    def __init__(self, graph: GraphModel,
-                 turn_steps: list[PathStep]) -> None:
-        super.__init__(graph)
-        self.state: dict[str, list[str]] = self._get_turn_state(turn_steps)
-        self.agents: list[str] = [s.agent_id for s in turn_steps]
-        self._agent_pos: dict[str, str] = {s.agent_id: s.hub_to.name for s in
-                                           turn_steps if not s.in_transit}
+    def __init__(self, graph: GraphModel) -> None:
+        super().__init__(graph)
+        self._map = Map(graph)
 
-    def _get_turn_state(self, steps: list[PathStep]) -> dict[str, list[str]]:
-        # return dict of {hub.name: list[agent_id]}
-        state: dict[str, list[str]] = {}
-        occupied_h: list[Hub] = [s.hub_to for s in steps if not s.in_transit]
-        for h in occupied_h:
-            agents = [s.agent_id for s in steps if s.hub_to.name == h.name]
-            state[h.name] = agents
-        return state
+    def _turn_counter(self, display_surface: pygame.Surface, turn_header: str) -> None:
+        header = self._map.font.render(turn_header, True, "black", None)
+        header_rect = header.get_rect(center=(self._screen[0] // 4, self._screen[1] - self._margin))
+        pygame.draw.rect(display_surface, "white", header_rect)
+        display_surface.blit(header, header_rect)
+        return None
 
-    def _static_blits(self, display_surface: pygame.Surface) -> None:
-        # for hub names, max_cap
-        name_font: pygame.Font = pygame.font.SysFont('wasy10', 20)
-        info_font: pygame.Font = pygame.font.SysFont('notomono', 10)
-        static_txt: list[tuple[pygame.Surface, pygame.Surface]] = []
-        for h in self.h:
-            name_txt = name_font.render(h.name, True, "black")
-            info_txt = info_font.render(f"Max. cap: {h.max_drones}", True, "black")
+    def _turn_blits(self, display_surface: pygame.Surface, turn_state: dict[str, list[str]]) -> None:
+        # dynamic path-badge text renderer
 
-            static_txt.append((name_txt, info_txt))
+        for pos, agent in turn_state.items():
+            if '-' in pos and pos not in self.h_positions:
+                # found an edge
+                hub_names = pos.split('-')
+                hub_a, hub_b = hub_names[0], hub_names[1]
+                ax, ay = self.h_positions[hub_a]
+                bx, by = self.h_positions[hub_b]
+                cx, cy = (ax + bx // 2, ay + by // 2)
+            else:
+                cx, cy = self.h_positions[pos]
+            turn_text = self._map.font.render(f"x{len(agent)}", True, "black", None)
+            turn_rect = turn_text.get_rect(center=(cx, cy + 20))
 
+            pygame.draw.circle(display_surface, "black", (cx, cy), 10)
+            # pygame.draw.rect(display_surface, self.h_color_dict[h], turn_rect)
+            display_surface.blit(turn_text, turn_rect)
+        return None

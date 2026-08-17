@@ -53,7 +53,7 @@ class Parser():
                 y=int(m.group('y')),
                 zone=cast(Literal['normal', 'restricted', 'priority', 'blocked'], metadata.get('zone', 'normal')),
                 color=metadata.get('color'),
-                max_drones=int(metadata.get('max_drones', 1)))
+                max_drones=metadata.get('max_drones'))
             return new_hub
         except Exception as e:
             raise e
@@ -78,7 +78,7 @@ class Parser():
                 name=edge_name,
                 hub_a=hub_a,
                 hub_b=hub_b,
-                max_capacity=int(metadata.get('max_link_capacity', 1))
+                max_capacity=metadata.get('max_link_capacity', 1)
                 )
             return new_edge
         except Exception as e:

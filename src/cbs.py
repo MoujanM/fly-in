@@ -59,7 +59,7 @@ class CBS(PathFinder):
         # now we have inverted joint_plan, can scan for conflict
         for (hub_name, t), agents in occupied_hubs.items():
             occupied_hub = self._hub_lookup[hub_name]
-            if len(agents) > occupied_hub.max_drones:
+            if occupied_hub.max_drones and len(agents) > occupied_hub.max_drones:
                 # conflict identified !
                 return Conflict(agent_a=agents[occupied_hub.max_drones - 1],
                                 agent_b=agents[occupied_hub.max_drones],
@@ -115,31 +115,3 @@ class CBS(PathFinder):
             print("No solution found within iteration limit.")
             return None
 
-    def get_turn_desc(self, result: CBSResult) -> list[str]:
-        delivered: set[str] = set()
-        turn_map: dict[int, list[PathStep]] = {}
-        simualation: list[str] = []
-
-        for agent, path in result.joint_plan.items():
-            for step in path:
-                turn_map.setdefault(step.t_depart, []).append(step)
-        
-        for turn in sorted(turn_map.keys()):
-            moves = []
-            for step in turn_map[turn]:
-                if step.agent_id in delivered:
-                    continue
-                if step.hub_from == step.hub_to:
-                    continue
-                if step.in_transit:
-                    connection: str = f"{step.hub_from.name}-{step.hub_to.name}"
-                    moves.append(f"{step.agent_id}-{connection}")
-                else:
-                    moves.append(f"{step.agent_id}-{step.hub_to.name}")
-                if step.hub_to.name == "goal" and not step.in_transit:
-                    delivered.add(step.agent_id)
-            if moves:
-                simualation.append(" ".join(moves))
-            if delivered == self.agent_ids:
-                break
-        return simualation

@@ -13,14 +13,14 @@ class Hub(BaseModel):
     y: int
     zone: Literal['normal', 'restricted', 'priority', 'blocked'] = Field(default='normal')
     color: str
-    max_drones: int = Field(ge=1)
+    max_drones: int | None
 
 
 class Edge(BaseModel):
     name: str
     hub_a: Hub
     hub_b: Hub
-    max_capacity: int = Field(ge=1, default=1)
+    max_capacity: int = Field(defualt=1)
 
 
 class GraphModel(BaseModel):
@@ -48,9 +48,9 @@ class GraphModel(BaseModel):
 # Group 2 : Path-finding structs
 class ZoneCost(Enum):
     """Mapping of zones with their effective costs."""
-    NORM = ("normal", 2)
+    NORM = ("normal", 1)
     PRIOR = ("priority", 1) # to prioritize, has lower eff cost
-    RES = ("restricted", 3)
+    RES = ("restricted", 2)
     BLOCK = ("blocked", None)
 
 @dataclass
@@ -68,7 +68,7 @@ class PathStep:
 class Constraint:
     # passed to A*
     agent_id: str
-    hub_name: str
+    position: str
     t: int
 
 @dataclass

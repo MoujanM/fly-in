@@ -33,9 +33,16 @@ class PathFinder():
             adj_map.setdefault(e.hub_b.name, []).append(e.hub_a)
         return adj_map
 
-    def _heuristic(self, v1: Hub, v2: Hub) -> int:
+    def _heuristic(self, v1: Hub, v2: Hub) -> float:
         # Calculates manhattan distance between two vertices
-        return abs(v1.x - v2.x) + abs(v1.y - v2.y)
+        # tie-breaker added after updating zone costs
+        distance = abs(v1.x - v2.x) + abs(v1.y - v2.y)
+        bonus: int = 0
+        if v1.zone == 'priority':
+            bonus += 0.1
+        if v1.zone == 'restricted':
+            bonus -= 0.1
+        return float(distance) + bonus
 
     def _move_cost(self, h: Hub) -> int | None:
         z_cost_lookup: dict[str, int] = {z.value[0]: z.value[1] for z in ZoneCost}
@@ -55,15 +62,14 @@ class PathFinder():
         path_steps: list[PathStep] = []
         for prev_s, curr_s in zip(path, path[1:]):
             turns_taken = curr_s[1] - prev_s[1]
-            is_waiting = curr_s[0].name == prev_s[0].name
-            in_transit = is_waiting and turns_taken == 2
+            is_moving = curr_s[0].name != prev_s[0].name
+            in_transit = is_moving and turns_taken == 2
             # if in_transit -> action = MOVE, else action = WAIT
             if in_transit:
                 edge_occupancy[f"{prev_s[0].name}-{curr_s[0].name}"] = (agent_id, prev_s[1], curr_s[1])
             step: PathStep = PathStep(agent_id, prev_s[0], curr_s[0],
                                       prev_s[1], curr_s[1], in_transit)
             path_steps.append(step)
-        
         return path_steps, edge_occupancy
 
 
@@ -77,11 +83,8 @@ class PathFinder():
             - list of hubs traversed with corresponding timestamp,
             - cost of total path movement.
         """
-        
         forbidden: set[tuple[str, int]] = {
-            (c.hub_name, c.t) for c in constraints if c.agent_id == agent_id} 
-        # need additional edge constraints
-
+            (c.position, c.t) for c in constraints if c.agent_id == agent_id} 
         # think of v as state of <hub, timestamp>
         v_start: tuple[Hub, int] = (next(h for h in self.hubs if h.kind == 'start_hub'), 0)
         v_goal: Hub = next(h for h in self.hubs if h.kind == 'end_hub')
@@ -112,6 +115,13 @@ class PathFinder():
                 new_state_key = (h.name, t + turns)
                 if new_state_key in forbidden:
                     continue
+
+                if h != curr_hub:
+                    edge_name = f"{curr_hub.name}-{h.name}"
+                    if (edge_name, t) in forbidden:
+                        continue
+                    if turns == 2 and (edge_name, t + 1) in forbidden:
+                        continue
                 new_cost = cost_sum[(curr_hub.name, t)] + turns
                 if new_state_key not in cost_sum or new_cost < cost_sum[new_state_key]:
                     cost_sum[(new_state_key)] = new_cost
