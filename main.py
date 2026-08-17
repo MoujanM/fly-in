@@ -15,7 +15,11 @@ def main():
 
     my_map = map_files[3]
     parser = Parser(my_map)
+
     solver = CBS(parser._graph)
+    # path, cost, edge_occ = solver.single_agent_path("D1", [])
+    # print([(s.hub_from.name, s.hub_to.name, s.t_depart, s.t_arrive, s.in_transit) for s in path])
+    # print(edge_occ)
     result = solver.solve()
 
     if not result:
@@ -60,8 +64,8 @@ def main():
     pygame.quit()
     for line in control.output:
         print(line)
-    print(f"Total Cost: {result.total_cost}")
     print(f"Makespan: {result.makespan}")
+    # print(result)
 
 
 

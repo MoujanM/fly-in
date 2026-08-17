@@ -26,15 +26,16 @@ class Agents(Renderer):
         # dynamic path-badge text renderer
 
         for pos, agent in turn_state.items():
-            if '-' in pos and pos not in self.h_positions:
+            if pos in self.h_positions:
+                cx, cy = self.h_positions[pos]
+            else:
                 # found an edge
                 hub_names = pos.split('-')
                 hub_a, hub_b = hub_names[0], hub_names[1]
                 ax, ay = self.h_positions[hub_a]
                 bx, by = self.h_positions[hub_b]
-                cx, cy = (ax + bx // 2, ay + by // 2)
-            else:
-                cx, cy = self.h_positions[pos]
+                cx, cy = ((ax + bx) // 2, (ay + by) // 2 + 10)
+                
             turn_text = self._map.font.render(f"x{len(agent)}", True, "black", None)
             turn_rect = turn_text.get_rect(center=(cx, cy + 20))
 

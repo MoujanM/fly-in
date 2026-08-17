@@ -43,7 +43,7 @@ class Map(Renderer):
             p_end: tuple[int, int] = self.h_positions[e.hub_b.name]
             pygame.draw.line(display_surface, pygame.Color('white'), p_start, p_end, width=10)
             
-            if e.max_capacity and e.max_capacity > 1:
+            if e.max_capacity:
                 info_txt = self.font.render(f"Capacity: {e.max_capacity}", True, "black", None)
                 info_rect = info_txt.get_rect(center=((p_start[0] + p_end[0]) // 2, (p_start[1] + p_end[1]) // 2 + 10))
                 pygame.draw.rect(display_surface, "grey", info_rect)

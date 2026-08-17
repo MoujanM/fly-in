@@ -42,8 +42,8 @@ class SimController():
     def final_state(self) -> dict[str, list[str]]:
         # no delivered filter
         state: dict[str, list[str]] = {}
-        for agent, hub in self._agent_positions.items():
-            state.setdefault(hub, []).append(agent)
+        for agent, position in self._agent_positions.items():
+            state.setdefault(position, []).append(agent)
         return state
 
     def _get_sim_desc(self) -> list[str]:
@@ -79,15 +79,15 @@ class SimController():
             for agent in self.agents:
                 self._agent_positions[agent] = "goal"
             self.jump_to_end()
-            return 
+            return
         next_turn = min(remaining_turns)
         steps = self.get_turn_steps()
         for step in steps:
             if step.in_transit:
                 edge_name = f"{step.hub_from.name}-{step.hub_to.name}"
                 self._agent_positions[step.agent_id] = edge_name
-                continue
-            self._agent_positions[step.agent_id] = step.hub_to.name
+            else:
+                self._agent_positions[step.agent_id] = step.hub_to.name
             if step.hub_to.kind == "end_hub":
                 self.delivered.add(step.agent_id)
         self.current_turn = next_turn

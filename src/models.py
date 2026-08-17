@@ -13,7 +13,7 @@ class Hub(BaseModel):
     y: int
     zone: Literal['normal', 'restricted', 'priority', 'blocked'] = Field(default='normal')
     color: str
-    max_drones: int | None
+    max_drones: int = Field(defualt=1)
 
 
 class Edge(BaseModel):
@@ -49,9 +49,10 @@ class GraphModel(BaseModel):
 class ZoneCost(Enum):
     """Mapping of zones with their effective costs."""
     NORM = ("normal", 1)
-    PRIOR = ("priority", 1) # to prioritize, has lower eff cost
+    PRIOR = ("priority", 1)     # to prioritize, has lower eff cost
     RES = ("restricted", 2)
     BLOCK = ("blocked", None)
+
 
 @dataclass
 class PathStep:
@@ -84,7 +85,7 @@ class CBSNode:
     constraints: list[Constraint]
     all_paths: dict[str, list[PathStep]]
     cost_per_agent: dict[str, int]
-    edge_occ: dict[str, list[tuple[str, int, int]]]
+
 
 @dataclass
 class CBSResult:

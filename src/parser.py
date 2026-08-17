@@ -53,7 +53,7 @@ class Parser():
                 y=int(m.group('y')),
                 zone=cast(Literal['normal', 'restricted', 'priority', 'blocked'], metadata.get('zone', 'normal')),
                 color=metadata.get('color'),
-                max_drones=metadata.get('max_drones'))
+                max_drones=metadata.get('max_drones', 1))
             return new_hub
         except Exception as e:
             raise e

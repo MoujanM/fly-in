@@ -49,7 +49,7 @@ class PathFinder():
         return z_cost_lookup[h.zone]
 
     def _build_path(self, agent_id: str, came_from: dict[tuple[str, int],
-    tuple[Hub, int] | None], goal_state: tuple[Hub, int]) -> tuple[list[PathStep], dict[str, tuple[str, int, int]]]:
+                    tuple[Hub, int] | None], goal_state: tuple[Hub, int]) -> list[PathStep]:
         
         path: list[tuple[Hub, int]] = []
         crumbs: tuple[Hub, int] | None = goal_state
@@ -58,22 +58,22 @@ class PathFinder():
             crumbs = came_from.get((crumbs[0].name, crumbs[1]))
         path.reverse()
         
-        edge_occupancy: dict[str, tuple[str, int, int]] = {}
+        # edge_occupancy: dict[str, list[tuple[str, int, int]]] = {}
         path_steps: list[PathStep] = []
         for prev_s, curr_s in zip(path, path[1:]):
             turns_taken = curr_s[1] - prev_s[1]
             is_moving = curr_s[0].name != prev_s[0].name
             in_transit = is_moving and turns_taken == 2
             # if in_transit -> action = MOVE, else action = WAIT
-            if in_transit:
-                edge_occupancy[f"{prev_s[0].name}-{curr_s[0].name}"] = (agent_id, prev_s[1], curr_s[1])
+            # if in_transit:
+            #     key = f"{prev_s[0].name}-{curr_s[0].name}"
+            #     edge_occupancy.setdefault(key, []).append((agent_id, prev_s[1], curr_s[1]))
             step: PathStep = PathStep(agent_id, prev_s[0], curr_s[0],
                                       prev_s[1], curr_s[1], in_transit)
             path_steps.append(step)
-        return path_steps, edge_occupancy
+        return path_steps
 
-
-    def single_agent_path(self, agent_id: str, constraints: list[Constraint]) -> tuple[list[PathStep], int, dict[str, tuple[str, int, int]]]:
+    def single_agent_path(self, agent_id: str, constraints: list[Constraint]) -> tuple[list[PathStep], int]:
         """
         Time-expanded A* algorithm. 
         Takes agent_id and list of constraints for that agent,
@@ -120,7 +120,7 @@ class PathFinder():
                     edge_name = f"{curr_hub.name}-{h.name}"
                     if (edge_name, t) in forbidden:
                         continue
-                    if turns == 2 and (edge_name, t + 1) in forbidden:
+                    if turns == 2 and (edge_name, t) in forbidden:
                         continue
                 new_cost = cost_sum[(curr_hub.name, t)] + turns
                 if new_state_key not in cost_sum or new_cost < cost_sum[new_state_key]:
@@ -128,9 +128,9 @@ class PathFinder():
                     priority = new_cost + self._heuristic(h, v_goal) # key - f(n) = g(n) + h(n)
                     heapq.heappush(hq, (priority, next(counter), (h, t + turns)))
                     came_from[new_state_key] = current_state
-        path_steps, edge_occupancy = self._build_path(agent_id, came_from, goal_state)
+        path_steps = self._build_path(agent_id, came_from, goal_state)
 
-        return (path_steps, cost_sum[(goal_state[0].name, goal_state[1])], edge_occupancy)
+        return (path_steps, cost_sum[(goal_state[0].name, goal_state[1])])
 
 
 if __name__ == "__main__":
