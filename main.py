@@ -62,9 +62,11 @@ def main():
         clock.tick(60)
 
     pygame.quit()
-    for line in control.output:
-        print(line)
-    print(f"Makespan: {result.makespan}")
+    # for line in control.output:
+    #     print(line)
+    # print(f"Makespan: {result.makespan}")
+    # for agent, path in result.joint_plan.items():
+    #     print(f"Agent: {agent}\n{}")
     # print(result)
 
 

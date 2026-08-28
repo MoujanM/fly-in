@@ -125,7 +125,7 @@ class PathFinder():
                 new_cost = cost_sum[(curr_hub.name, t)] + turns
                 if new_state_key not in cost_sum or new_cost < cost_sum[new_state_key]:
                     cost_sum[(new_state_key)] = new_cost
-                    priority = new_cost + self._heuristic(h, v_goal) # key - f(n) = g(n) + h(n)
+                    priority = new_cost + self._heuristic(h, v_goal)
                     heapq.heappush(hq, (priority, next(counter), (h, t + turns)))
                     came_from[new_state_key] = current_state
         path_steps = self._build_path(agent_id, came_from, goal_state)
