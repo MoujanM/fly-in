@@ -10,10 +10,11 @@ def main():
     map_files = ["./maps/hard/01_maze_nightmare.txt",
                  "./maps/hard/02_capacity_hell.txt",
                  "./maps/hard/03_ultimate_challenge.txt",
-                 "./maps/medium/02_circular_loop.txt"
+                 "./maps/medium/02_circular_loop.txt",
+                 "./maps/challenger/01_the_impossible_dream.txt"
     ]
 
-    my_map = map_files[3]
+    my_map = map_files[2]
     parser = Parser(my_map)
 
     solver = CBS(parser._graph)
@@ -62,14 +63,13 @@ def main():
         clock.tick(60)
 
     pygame.quit()
-    # for line in control.output:
-    #     print(line)
+    for line in control.output:
+        print(line)
     # print(f"Makespan: {result.makespan}")
     # for agent, path in result.joint_plan.items():
-    #     print(f"Agent: {agent}\n{}")
+    #     for step in path:
+    #         print(f"Agent: {agent}\n{step}")
     # print(result)
-
-
 
 if __name__ == "__main__":
     main()

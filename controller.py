@@ -9,8 +9,9 @@ class SimController():
     Gets states from src/ and hands to visualizer.
     """
     def __init__(self, graph: GraphModel, result: CBSResult):
+        self.result: CBSResult = result
         self.agents: list[str] = list(result.joint_plan.keys())
-        self.turn_map: dict[int, list[PathStep]] = self._get_turn_map(result)
+        self.turn_map: dict[int, list[PathStep]] = self._get_turn_map()
         self.output: list[str] = self._get_sim_desc()
 
         self.current_turn: int = 0
@@ -22,13 +23,32 @@ class SimController():
         for agent in self.agents:
             self._agent_positions[agent] = start_name
 
-    def _get_turn_map(self, result: CBSResult) -> dict[int, list[PathStep]]:
+    def _get_turn_map(self) -> dict[int, list[PathStep]]:
         # return dict of {turn_nb: list[steps]}
         turn_map: dict[int, list[PathStep]] = {}
-
-        for agent, path in result.joint_plan.items():
+        for agent, path in self.result.joint_plan.items():
             for step in path:
                 turn_map.setdefault(step.t_depart, []).append(step)
+                if step.in_transit:
+                    for mid_t in range(step.t_depart + 1, step.t_arrive):
+                        present = PathStep(
+                            agent_id=agent,
+                            hub_from=step.hub_from,
+                            hub_to=step.hub_to,
+                            t_depart=mid_t,
+                            t_arrive=step.t_arrive,
+                            in_transit=True
+                        )
+                        turn_map.setdefault(mid_t, []).append(present)
+                    arrival = PathStep(
+                        agent_id=agent,
+                        hub_from=step.hub_to,
+                        hub_to=step.hub_to,
+                        t_depart=step.t_arrive,
+                        t_arrive=step.t_arrive,
+                        in_transit=False
+                    )
+                    turn_map.setdefault(step.t_arrive, []).append(arrival)
         return turn_map
 
     def get_turn_state(self) -> dict[str, list[str]]:
@@ -47,11 +67,16 @@ class SimController():
         return state
 
     def _get_sim_desc(self) -> list[str]:
+        turn_map: dict[int, list[PathStep]] = {}
+        for agent, path in self.result.joint_plan.items():
+            for step in path:
+                turn_map.setdefault(step.t_depart, []).append(step)
+
         delivered: set[str] = set()
         simualation: list[str] = []
-        for turn in sorted(self.turn_map.keys()):
+        for turn in sorted(turn_map.keys()):
             moves = []
-            for step in self.turn_map[turn]:
+            for step in turn_map[turn]:
                 if step.agent_id in delivered:
                     continue
                 if step.hub_from == step.hub_to:
@@ -84,8 +109,13 @@ class SimController():
         for step in steps:
             if step.in_transit:
                 edge_name = f"{step.hub_from.name}-{step.hub_to.name}"
-                self._agent_positions[step.agent_id] = edge_name
-               # self.
+                prev_pos = self._agent_positions.get(step.agent_id)
+                if any([char for char in prev_pos if char == '-']):
+                    # previously on connection
+                    if step.t_depart == self.current_turn:
+                        self._agent_positions[step.agent_id] = step.hub_to.name
+                else:
+                    self._agent_positions[step.agent_id] = edge_name
                 continue
             else:
                 self._agent_positions[step.agent_id] = step.hub_to.name
