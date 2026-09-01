@@ -11,9 +11,16 @@ class Hub(BaseModel):
     name: str
     x: int
     y: int
-    zone: Literal['normal', 'restricted', 'priority', 'blocked'] = Field(default='normal')
+    zone: Literal['normal', 'restricted',
+                  'priority', 'blocked'] = Field(default='normal')
     color: str
     max_drones: int = Field(defualt=1)
+
+    @model_validator(mode='after')
+    def change_color(self) -> 'Hub':
+        if self.color == 'rainbow':
+            self.color = 'fuchsia'
+        return self
 
 
 class Edge(BaseModel):
@@ -72,6 +79,7 @@ class Constraint:
     position: str
     t: int
 
+
 @dataclass
 class Conflict:
     # detected by CBS
@@ -79,6 +87,7 @@ class Conflict:
     agent_b: str
     position: str   # name of hub/edge
     time: int
+
 
 @dataclass
 class CBSNode:
@@ -93,5 +102,3 @@ class CBSResult:
     cost_per_agent: dict[str, int]
     makespan: int
     total_cost: int
-
-

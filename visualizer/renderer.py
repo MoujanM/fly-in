@@ -1,4 +1,3 @@
-import pygame
 from src.models import GraphModel, Hub, Edge
 
 
@@ -11,17 +10,16 @@ class Renderer():
     These are passed to child classes for easy & fast drawing.
     """
     def __init__(self, graph: GraphModel) -> None:
-        self._scale: int = 200
-        self._margin: int = 80
+        self._scale: int = 140
+        self._margin: int = 40
 
         self.h: list[Hub] = graph.hubs
         self.e: list[Edge] = graph.edges
-        
+
         self._screen: tuple[int, int] = self._ds_size()
         self._offset: tuple[int, int] = self._compute_offset()
         self.h_positions: dict[str, tuple[int, int]] = self._get_h_positions()
 
-    
     def _ds_size(self) -> tuple[int, int]:
         """Function to determine size of display surface.
         min_size is defined, else using graph to determine width & height.
@@ -41,24 +39,25 @@ class Renderer():
         Function to compute where in the screen to put drawings.
         """
         min_x: int = min(h.x for h in self.h)
-        max_x: int = max(h.x for h in self.h)
+        # max_x: int = max(h.x for h in self.h)
         min_y: int = min(h.y for h in self.h)
-        max_y: int = max(h.y for h in self.h)
+        # max_y: int = max(h.y for h in self.h)
 
-        screen_w: int = self._screen[0] - 2 * self._margin
-        screen_h: int = self._screen[1] - 2 * self._margin
+        # screen_w: int = self._screen[0] - 2 * self._margin
+        # screen_h: int = self._screen[1] - 2 * self._margin
 
-        span_x: int = max_x - min_x
-        span_y: int = max_y - min_y
+        # span_x: int = max_x - min_x
+        # span_y: int = max_y - min_y
 
         offset_x: int = self._margin + (-min_x * self._scale)
         offset_y: int = self._margin + (-min_y * self._scale)
         # screen_h // 2 +
         return (offset_x, offset_y)
-    
+
     def _pixel_scaler(self, x: int, y: int) -> tuple[int, int]:
         """Takes logical coordinates, returns physical ones."""
-        return (x * self._scale + self._offset[0], y * self._scale + self._offset[1])
+        return (x * self._scale + self._offset[0],
+                y * self._scale + self._offset[1])
 
     def _get_h_positions(self) -> dict[str, tuple[int, int]]:
         positions: dict[str, tuple[int, int]] = {}

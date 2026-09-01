@@ -1,7 +1,5 @@
-import pygame
-from src.models import GraphModel, Hub, Edge, PathStep, CBSResult
-from visualizer.renderer import Renderer
-from visualizer.map import Map
+from src.models import GraphModel, PathStep, CBSResult
+
 
 class SimController():
     """
@@ -82,8 +80,8 @@ class SimController():
                 if step.hub_from == step.hub_to:
                     continue
                 if step.in_transit:
-                    connection: str = f"{step.hub_from.name}-{step.hub_to.name}"
-                    moves.append(f"{step.agent_id}-{connection}")
+                    edge: str = f"{step.hub_from.name}-{step.hub_to.name}"
+                    moves.append(f"{step.agent_id}-{edge}")
                 else:
                     moves.append(f"{step.agent_id}-{step.hub_to.name}")
                 if step.hub_to.kind == "end_hub" and not step.in_transit:
@@ -98,7 +96,8 @@ class SimController():
         return self.turn_map[self.current_turn]
 
     def advance_turn(self) -> None:
-        remaining_turns: list[int] = [t for t in self.turn_map if t > self.current_turn]
+        remaining_turns: list[int] = [
+            t for t in self.turn_map if t > self.current_turn]
         if not remaining_turns:
             for agent in self.agents:
                 self._agent_positions[agent] = "goal"
@@ -130,7 +129,8 @@ class SimController():
         return None
 
     def turn_header(self) -> str:
-        return f"Turn {self.current_turn} / {self.max_turn} (nb_agents: {len(self.agents)})"
-    
+        return (f"Turn {self.current_turn} / {self.max_turn}"
+                f" (nb_agents: {len(self.agents)})")
+
     def sim_complete(self) -> bool:
         return self.delivered == set(self.agents)

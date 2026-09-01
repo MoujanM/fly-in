@@ -45,37 +45,37 @@ class PathFinder():
         return float(distance) + bonus
 
     def _move_cost(self, h: Hub) -> int | None:
-        z_cost_lookup: dict[str, int] = {z.value[0]: z.value[1] for z in ZoneCost}
+        z_cost_lookup: dict[str, int] = {
+            z.value[0]: z.value[1] for z in ZoneCost}
         return z_cost_lookup[h.zone]
 
     def _build_path(self, agent_id: str, came_from: dict[tuple[str, int],
-                    tuple[Hub, int] | None], goal_state: tuple[Hub, int]) -> list[PathStep]:
-        
+                    tuple[Hub, int] | None],
+                    goal_state: tuple[Hub, int]) -> list[PathStep]:
+
         path: list[tuple[Hub, int]] = []
         crumbs: tuple[Hub, int] | None = goal_state
         while crumbs is not None:
             path.append(crumbs)
             crumbs = came_from.get((crumbs[0].name, crumbs[1]))
         path.reverse()
-        
+
         # edge_occupancy: dict[str, list[tuple[str, int, int]]] = {}
         path_steps: list[PathStep] = []
         for prev_s, curr_s in zip(path, path[1:]):
             turns_taken = curr_s[1] - prev_s[1]
             is_moving = curr_s[0].name != prev_s[0].name
             in_transit = is_moving and turns_taken == 2
-            # if in_transit -> action = MOVE, else action = WAIT
-            # if in_transit:
-            #     key = f"{prev_s[0].name}-{curr_s[0].name}"
-            #     edge_occupancy.setdefault(key, []).append((agent_id, prev_s[1], curr_s[1]))
             step: PathStep = PathStep(agent_id, prev_s[0], curr_s[0],
                                       prev_s[1], curr_s[1], in_transit)
             path_steps.append(step)
         return path_steps
 
-    def single_agent_path(self, agent_id: str, constraints: list[Constraint]) -> tuple[list[PathStep], int]:
+    def single_agent_path(self, agent_id: str,
+                          constraints: list[Constraint]) -> tuple[
+                              list[PathStep], int]:
         """
-        Time-expanded A* algorithm. 
+        Time-expanded A* algorithm.
         Takes agent_id and list of constraints for that agent,
         returns agent's path through graph; start -> goal.
 
@@ -84,16 +84,20 @@ class PathFinder():
             - cost of total path movement.
         """
         forbidden: set[tuple[str, int]] = {
-            (c.position, c.t) for c in constraints if c.agent_id == agent_id} 
+            (c.position, c.t) for c in constraints if c.agent_id == agent_id}
         # think of v as state of <hub, timestamp>
-        v_start: tuple[Hub, int] = (next(h for h in self.hubs if h.kind == 'start_hub'), 0)
+        v_start: tuple[Hub, int] = (
+            next(h for h in self.hubs if h.kind == 'start_hub'), 0)
         v_goal: Hub = next(h for h in self.hubs if h.kind == 'end_hub')
 
-        came_from: dict[tuple[str, int], tuple[Hub, int] | None] = {(v_start[0].name, v_start[1]): None}
-        cost_sum: dict[tuple[str, int], int] = {(v_start[0].name, v_start[1]): 0}
+        came_from: dict[tuple[str, int], tuple[Hub, int] | None] = {
+            (v_start[0].name, v_start[1]): None}
+        cost_sum: dict[tuple[str, int], int] = {
+            (v_start[0].name, v_start[1]): 0}
 
-        counter = itertools.count()     # to break ties so no Hub comparison needed
-        hq: list[tuple[int, int, tuple[Hub, int]]] = [(0, next(counter), v_start)]  # (priority, tiebreaker, state)
+        counter = itertools.count()     # tie-breaker
+        hq: list[tuple[int, int, tuple[Hub, int]]] = [
+            (0, next(counter), v_start)]  # (priority, tiebreaker, state)
 
         while hq:
             priority, _, current_state = heapq.heappop(hq)
@@ -115,7 +119,6 @@ class PathFinder():
                 new_state_key = (h.name, t + turns)
                 if new_state_key in forbidden:
                     continue
-
                 if h != curr_hub:
                     edge_name = f"{curr_hub.name}-{h.name}"
                     if (edge_name, t) in forbidden:
@@ -123,10 +126,12 @@ class PathFinder():
                     if turns == 2 and (edge_name, t) in forbidden:
                         continue
                 new_cost = cost_sum[(curr_hub.name, t)] + turns
-                if new_state_key not in cost_sum or new_cost < cost_sum[new_state_key]:
+                if (new_state_key not in cost_sum or
+                        new_cost < cost_sum[new_state_key]):
                     cost_sum[(new_state_key)] = new_cost
                     priority = new_cost + self._heuristic(h, v_goal)
-                    heapq.heappush(hq, (priority, next(counter), (h, t + turns)))
+                    heapq.heappush(hq,
+                                   (priority, next(counter), (h, t + turns)))
                     came_from[new_state_key] = current_state
         path_steps = self._build_path(agent_id, came_from, goal_state)
 
@@ -147,4 +152,3 @@ if __name__ == "__main__":
     # print(f"Path to walk: {path}")
     # print(f"Cost of path walked: {cost}")
     # print(f"Total cost: {cost[-1][-1]}")
-

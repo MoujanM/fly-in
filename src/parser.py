@@ -51,7 +51,9 @@ class Parser():
                 name=m.group('name'),
                 x=int(m.group('x')),
                 y=int(m.group('y')),
-                zone=cast(Literal['normal', 'restricted', 'priority', 'blocked'], metadata.get('zone', 'normal')),
+                zone=cast(Literal['normal', 'restricted',
+                                  'priority', 'blocked'],
+                          metadata.get('zone', 'normal')),
                 color=metadata.get('color'),
                 max_drones=metadata.get('max_drones', 1))
             return new_hub
@@ -64,7 +66,7 @@ class Parser():
             raise Exception("Error parsing connection - check input file.")
 
         hub_name_lookup: dict[str, Hub] = {h.name: h for h in self._hubs}
-        
+
         try:
             hub_a: Hub = hub_name_lookup[m.group('hub_a')]
             hub_b: Hub = hub_name_lookup[m.group('hub_b')]
@@ -97,7 +99,7 @@ class Parser():
                     continue
                 if line.startswith('nb_drones'):
                     nb_agents = int(line.split(':')[1].strip())
-                elif 'hub' in line:
+                elif 'hub:' in line:
                     if self.parse_return_hub(line):
                         self._hubs.append(self.parse_return_hub(line))
                 elif 'connection' in line:
@@ -107,16 +109,16 @@ class Parser():
         return nb_agents, self._hubs, self._edges
 
     def get_graph(self) -> 'GraphModel':
-        graph_vals = self._read_values()
         try:
+            graph_vals = self._read_values()
             return GraphModel(nb_agents=graph_vals[0],
                               hubs=graph_vals[1],
                               edges=graph_vals[2])
         except Exception as e:
-            raise(e)
+            print(e)
 
 
 if __name__ == "__main__":
-    filename = "./maps/easy/02_simple_fork.txt"
+    filename = "./maps/hard/03_ultimate_challenge.txt"
     parser = Parser(filename)
-    print(parser._hubs)
+    # print(parser._hubs)

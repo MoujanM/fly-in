@@ -65,11 +65,12 @@ def main():
     pygame.quit()
     for line in control.output:
         print(line)
-    # print(f"Makespan: {result.makespan}")
+    print(f"Makespan: {result.makespan}")
     # for agent, path in result.joint_plan.items():
     #     for step in path:
     #         print(f"Agent: {agent}\n{step}")
     # print(result)
+
 
 if __name__ == "__main__":
     main()
