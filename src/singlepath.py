@@ -59,8 +59,6 @@ class PathFinder():
             path.append(crumbs)
             crumbs = came_from.get((crumbs[0].name, crumbs[1]))
         path.reverse()
-
-        # edge_occupancy: dict[str, list[tuple[str, int, int]]] = {}
         path_steps: list[PathStep] = []
         for prev_s, curr_s in zip(path, path[1:]):
             turns_taken = curr_s[1] - prev_s[1]
@@ -71,9 +69,7 @@ class PathFinder():
             path_steps.append(step)
         return path_steps
 
-    def single_agent_path(self, agent_id: str,
-                          constraints: list[Constraint]) -> tuple[
-                              list[PathStep], int]:
+    def single_agent_path(self, agent_id: str, constraints: list[Constraint]) -> tuple[list[PathStep], int]:
         """
         Time-expanded A* algorithm.
         Takes agent_id and list of constraints for that agent,
@@ -83,28 +79,22 @@ class PathFinder():
             - list of hubs traversed with corresponding timestamp,
             - cost of total path movement.
         """
-        forbidden: set[tuple[str, int]] = {
-            (c.position, c.t) for c in constraints if c.agent_id == agent_id}
+        forbidden: set[tuple[str, int]] = {(c.position, c.t) for c in constraints if c.agent_id == agent_id}
         # think of v as state of <hub, timestamp>
-        v_start: tuple[Hub, int] = (
-            next(h for h in self.hubs if h.kind == 'start_hub'), 0)
+        v_start: tuple[Hub, int] = (next(h for h in self.hubs if h.kind == 'start_hub'), 0)
         v_goal: Hub = next(h for h in self.hubs if h.kind == 'end_hub')
 
-        came_from: dict[tuple[str, int], tuple[Hub, int] | None] = {
-            (v_start[0].name, v_start[1]): None}
-        cost_sum: dict[tuple[str, int], int] = {
-            (v_start[0].name, v_start[1]): 0}
+        came_from: dict[tuple[str, int], tuple[Hub, int] | None] = {(v_start[0].name, v_start[1]): None}
+        cost_sum: dict[tuple[str, int], int] = {(v_start[0].name, v_start[1]): 0}
 
         counter = itertools.count()     # tie-breaker
-        hq: list[tuple[int, int, tuple[Hub, int]]] = [
-            (0, next(counter), v_start)]  # (priority, tiebreaker, state)
+        hq: list[tuple[int, int, tuple[Hub, int]]] = [(0, next(counter), v_start)]  # (priority, tiebreaker, state)
 
         while hq:
             priority, _, current_state = heapq.heappop(hq)
             if current_state[0].name == v_goal.name:
                 goal_state = current_state
                 break
-
             curr_hub, t = current_state
             neighbours = self.adj_map.get(curr_hub.name, [])
             move_opts: list[Hub] = neighbours + [curr_hub]
@@ -123,15 +113,11 @@ class PathFinder():
                     edge_name = f"{curr_hub.name}-{h.name}"
                     if (edge_name, t) in forbidden:
                         continue
-                    if turns == 2 and (edge_name, t) in forbidden:
-                        continue
                 new_cost = cost_sum[(curr_hub.name, t)] + turns
-                if (new_state_key not in cost_sum or
-                        new_cost < cost_sum[new_state_key]):
+                if (new_state_key not in cost_sum or new_cost < cost_sum[new_state_key]):
                     cost_sum[(new_state_key)] = new_cost
                     priority = new_cost + self._heuristic(h, v_goal)
-                    heapq.heappush(hq,
-                                   (priority, next(counter), (h, t + turns)))
+                    heapq.heappush(hq, (priority, next(counter), (h, t + turns)))
                     came_from[new_state_key] = current_state
         path_steps = self._build_path(agent_id, came_from, goal_state)
 

@@ -93,29 +93,31 @@ class Parser():
         all connections (edges)
         """
         nb_agents: int = 0
-        with open(self.filename) as f:
-            for line in f:
-                if line.startswith("#") or line.isspace():
-                    continue
-                if line.startswith('nb_drones'):
-                    nb_agents = int(line.split(':')[1].strip())
-                elif 'hub:' in line:
-                    if self.parse_return_hub(line):
-                        self._hubs.append(self.parse_return_hub(line))
-                elif 'connection' in line:
-                    if self.parse_return_edge(line):
-                        self._edges.append(self.parse_return_edge(line))
-
-        return nb_agents, self._hubs, self._edges
+        try:
+            with open(self.filename) as f:
+                for line in f:
+                    if line.startswith("#") or line.isspace():
+                        continue
+                    if line.startswith('nb_drones'):
+                        nb_agents = int(line.split(':')[1].strip())
+                    elif 'hub:' in line:
+                        if self.parse_return_hub(line):
+                            self._hubs.append(self.parse_return_hub(line))
+                    elif 'connection:' in line:
+                        if self.parse_return_edge(line):
+                            self._edges.append(self.parse_return_edge(line))
+            return nb_agents, self._hubs, self._edges
+        except FileNotFoundError as e:
+            raise e
 
     def get_graph(self) -> 'GraphModel':
         try:
             graph_vals = self._read_values()
-            return GraphModel(nb_agents=graph_vals[0],
-                              hubs=graph_vals[1],
-                              edges=graph_vals[2])
         except Exception as e:
-            print(e)
+            raise e
+        return GraphModel(nb_agents=graph_vals[0],
+                            hubs=graph_vals[1],
+                            edges=graph_vals[2])
 
 
 if __name__ == "__main__":
