@@ -54,8 +54,8 @@ class Parser():
                 zone=cast(Literal['normal', 'restricted',
                                   'priority', 'blocked'],
                           metadata.get('zone', 'normal')),
-                color=metadata.get('color'),
-                max_drones=metadata.get('max_drones', 1))
+                color=str(metadata.get('color')),
+                max_drones=int(metadata.get('max_drones', 1)))
             return new_hub
         except Exception as e:
             raise e
@@ -80,7 +80,7 @@ class Parser():
                 name=edge_name,
                 hub_a=hub_a,
                 hub_b=hub_b,
-                max_capacity=metadata.get('max_link_capacity', 1)
+                max_capacity=int(metadata.get('max_link_capacity', 1))
                 )
             return new_edge
         except Exception as e:
@@ -93,22 +93,20 @@ class Parser():
         all connections (edges)
         """
         nb_agents: int = 0
-        try:
-            with open(self.filename) as f:
-                for line in f:
-                    if line.startswith("#") or line.isspace():
-                        continue
-                    if line.startswith('nb_drones'):
-                        nb_agents = int(line.split(':')[1].strip())
-                    elif 'hub:' in line:
-                        if self.parse_return_hub(line):
-                            self._hubs.append(self.parse_return_hub(line))
-                    elif 'connection:' in line:
-                        if self.parse_return_edge(line):
-                            self._edges.append(self.parse_return_edge(line))
-            return nb_agents, self._hubs, self._edges
-        except FileNotFoundError as e:
-            raise e
+        with open(self.filename) as f:
+            for line in f:
+                if line.startswith("#") or line.isspace():
+                    continue
+                if line.startswith('nb_drones'):
+                    nb_agents = int(line.split(':')[1].strip())
+                elif 'hub:' in line:
+                    if self.parse_return_hub(line):
+                        self._hubs.append(self.parse_return_hub(line))
+                elif 'connection' in line:
+                    if self.parse_return_edge(line):
+                        self._edges.append(self.parse_return_edge(line))
+
+        return nb_agents, self._hubs, self._edges
 
     def get_graph(self) -> 'GraphModel':
         try:

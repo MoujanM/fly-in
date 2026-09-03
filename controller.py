@@ -108,8 +108,8 @@ class SimController():
         for step in steps:
             if step.in_transit:
                 edge_name = f"{step.hub_from.name}-{step.hub_to.name}"
-                prev_pos = self._agent_positions.get(step.agent_id)
-                if any([char for char in prev_pos if char == '-']):
+                prev_pos: str = self._agent_positions[step.agent_id]
+                if '-' in prev_pos:
                     # previously on connection
                     if step.t_depart == self.current_turn:
                         self._agent_positions[step.agent_id] = step.hub_to.name

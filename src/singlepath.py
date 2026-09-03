@@ -37,7 +37,7 @@ class PathFinder():
         # Calculates manhattan distance between two vertices
         # tie-breaker added after updating zone costs
         distance = abs(v1.x - v2.x) + abs(v1.y - v2.y)
-        bonus: int = 0
+        bonus: float = 0
         if v1.zone == 'priority':
             bonus += 0.1
         if v1.zone == 'restricted':
@@ -84,11 +84,13 @@ class PathFinder():
         v_start: tuple[Hub, int] = (next(h for h in self.hubs if h.kind == 'start_hub'), 0)
         v_goal: Hub = next(h for h in self.hubs if h.kind == 'end_hub')
 
-        came_from: dict[tuple[str, int], tuple[Hub, int] | None] = {(v_start[0].name, v_start[1]): None}
-        cost_sum: dict[tuple[str, int], int] = {(v_start[0].name, v_start[1]): 0}
+        came_from: dict[tuple[str, int], tuple[Hub, int] | None] = {
+            (v_start[0].name, v_start[1]): None}
+        cost_sum: dict[tuple[str, int], int] = {
+            (v_start[0].name, v_start[1]): 0}
 
         counter = itertools.count()     # tie-breaker
-        hq: list[tuple[int, int, tuple[Hub, int]]] = [(0, next(counter), v_start)]  # (priority, tiebreaker, state)
+        hq: list[tuple[float, int, tuple[Hub, int]]] = [(0.0, next(counter), v_start)]  # (priority, tiebreaker, state)
 
         while hq:
             priority, _, current_state = heapq.heappop(hq)
@@ -101,9 +103,9 @@ class PathFinder():
             for h in move_opts:
                 if h == curr_hub:
                     # wait action costs 1
-                    turns = 1
+                    turns: int | None = 1
                 else:
-                    turns = self._move_cost(h)
+                    turns= self._move_cost(h)
                 if turns is None:
                     continue
                 new_state_key = (h.name, t + turns)
@@ -112,6 +114,8 @@ class PathFinder():
                 if h != curr_hub:
                     edge_name = f"{curr_hub.name}-{h.name}"
                     if (edge_name, t) in forbidden:
+                        continue
+                    if turns == 2 and (edge_name, t) in forbidden:
                         continue
                 new_cost = cost_sum[(curr_hub.name, t)] + turns
                 if (new_state_key not in cost_sum or new_cost < cost_sum[new_state_key]):
@@ -129,7 +133,7 @@ if __name__ == "__main__":
     filename = "./maps/easy/02_simple_fork.txt"
     parser = Parser(filename)
     solver = PathFinder(parser._graph)
-    print(solver.agent_ids)
+    # print(solver.agent_ids)
     for agent in solver.agent_ids:
         print(f"{agent} ==> {solver.single_agent_path(agent, [])}")
     # print(parser._hubs)

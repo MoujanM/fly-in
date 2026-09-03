@@ -14,7 +14,7 @@ class Hub(BaseModel):
     zone: Literal['normal', 'restricted',
                   'priority', 'blocked'] = Field(default='normal')
     color: str
-    max_drones: int = Field(defualt=1)
+    max_drones: int = Field(default=1)
 
     @model_validator(mode='after')
     def change_color(self) -> 'Hub':
@@ -27,7 +27,7 @@ class Edge(BaseModel):
     name: str
     hub_a: Hub
     hub_b: Hub
-    max_capacity: int = Field(defualt=1)
+    max_capacity: int = Field(default=1)
 
 
 class GraphModel(BaseModel):
