@@ -84,10 +84,8 @@ class PathFinder():
         v_start: tuple[Hub, int] = (next(h for h in self.hubs if h.kind == 'start_hub'), 0)
         v_goal: Hub = next(h for h in self.hubs if h.kind == 'end_hub')
 
-        came_from: dict[tuple[str, int], tuple[Hub, int] | None] = {
-            (v_start[0].name, v_start[1]): None}
-        cost_sum: dict[tuple[str, int], int] = {
-            (v_start[0].name, v_start[1]): 0}
+        came_from: dict[tuple[str, int], tuple[Hub, int] | None] = {(v_start[0].name, v_start[1]): None}
+        cost_sum: dict[tuple[str, int], int] = {(v_start[0].name, v_start[1]): 0}
 
         counter = itertools.count()     # tie-breaker
         hq: list[tuple[float, int, tuple[Hub, int]]] = [(0.0, next(counter), v_start)]  # (priority, tiebreaker, state)
@@ -115,8 +113,8 @@ class PathFinder():
                     edge_name = f"{curr_hub.name}-{h.name}"
                     if (edge_name, t) in forbidden:
                         continue
-                    if turns == 2 and (edge_name, t) in forbidden:
-                        continue
+                    # if turns == 2 and (edge_name, t) in forbidden:
+                    #     continue
                 new_cost = cost_sum[(curr_hub.name, t)] + turns
                 if (new_state_key not in cost_sum or new_cost < cost_sum[new_state_key]):
                     cost_sum[(new_state_key)] = new_cost
