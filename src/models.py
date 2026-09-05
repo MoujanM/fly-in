@@ -5,6 +5,15 @@ from enum import Enum
 from dataclasses import dataclass
 
 
+class ParsingError(Exception):
+    def __init__(self, msg: str):
+        self.msg = msg
+        super().__init__(msg)
+
+    def __str__(self):
+        return f"ParsingError: {self.msg}"
+
+
 # Group 1 : Graph-related pydantic models
 class Hub(BaseModel):
     kind: Literal['start_hub', 'hub', 'end_hub']
@@ -15,6 +24,12 @@ class Hub(BaseModel):
                   'priority', 'blocked'] = Field(default='normal')
     color: str
     max_drones: int = Field(default=1)
+
+    @model_validator(mode='after')
+    def check_name(self) -> 'Hub':
+        if '-' in self.name or ' ' in self.name:
+            raise ValueError("Hub name cannot contain dashes or spaces.")
+        return self
 
     @model_validator(mode='after')
     def change_color(self) -> 'Hub':
@@ -40,15 +55,33 @@ class GraphModel(BaseModel):
         hub_names = [h.name for h in self.hubs]
         for e in self.edges:
             if e.hub_a.name not in hub_names or e.hub_b.name not in hub_names:
-                raise ValueError("Found invalid connection in graph.")
+                raise ValueError(f"Found invalid connection in graph: {e}")
+        for e1, e2 in zip(self.edges, self.edges[1:]):
+            if set(e1.name.split('-')) == set(e2.name.split('-')):
+                raise ValueError(f"Found duplicate connections:\n \
+                                 {e1.name} and {e2.name}")
         return self
 
     @model_validator(mode='after')
     def check_start_end(self) -> 'GraphModel':
         if len([h for h in self.hubs if h.kind == 'start_hub']) != 1:
-            raise ValueError("Error building graph - check start_hub")
+            raise ValueError("There must be exactly 1 start_hub")
         if len([h for h in self.hubs if h.kind == 'end_hub']) != 1:
-            raise ValueError("Error building graph - check end_hub")
+            raise ValueError("There must be exactly 1 end_hub")
+        return self
+
+    @model_validator(mode='after')
+    def check_hub_names(self) -> 'GraphModel':
+        if len([h.name for h in self.hubs
+                ]) != len(set(h.name for h in self.hubs)):
+            raise ValueError("Hubs must have unique names")
+        return self
+
+    @model_validator(mode='after')
+    def check_start_end_cap(self) -> 'GraphModel':
+        for h in self.hubs:
+            if h.kind == 'start_hub' or h.kind == 'end_hub':
+                h.max_drones = self.nb_agents
         return self
 
 
