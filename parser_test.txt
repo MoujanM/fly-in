@@ -1,5 +1,5 @@
 # Hard Level 2: Extreme capacity constraints with timing challenges
-nb_drones: -12
+# nb_drones: 12
 
 start_hub: start 0 0 [color=green max_drones=12]
 hub: gate1 1 0 [color=orange max_drones=1]

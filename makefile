@@ -1,6 +1,7 @@
 SCRIPT := fly_in
+ARGS ?= maps/easy/01_linear_path.txt
 
-.PHONY: all install run debug clean lint lint-strict
+.PHONY: all install run debug clean fclean lint lint-strict
 
 install: check-uv
 	uv sync
@@ -11,20 +12,22 @@ check-uv:
 		curl -LsSf https://astral.sh/uv/install.sh | sh \
 		)
 
-all: install 
-	run
+all: install run
 
 run:
-	uv run -m $(SCRIPT)
+	uv run -m $(SCRIPT) $(ARGS)
 
 debug:
-	uv run -m pdb $(SCRIPT)
+	uv run -m pdb $(SCRIPT) $(ARGS)
 
 clean:
 	@echo "Cleaning caches and temporary files..."
 	rm -rf .mypy_cache
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
+
+fclean: clean
+	find . -type d -name ".venv" -exec rm -rf {} +
 
 lint:
 	@echo "Checking flake8 ..."

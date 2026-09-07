@@ -3,8 +3,6 @@ from pydantic import ValidationError
 import re
 from typing import cast, Literal
 
-# constant mod variables for efficient parsing
-# naming captured groups using (?P<name>pattern)
 HUB_PATTERN: re.Pattern = re.compile(r'^(?P<kind>\w+_hub|hub):\s+'
                                      r'(?P<name>\w+)\s+'
                                      r'(?P<x>-?\d+)\s+(?P<y>-?\d+)'
@@ -13,12 +11,12 @@ EDGE_PATTERN: re.Pattern = re.compile(
     r'^connection:\s+(?P<hub_a>\w+)-(?P<hub_b>\w+)'
     r'(?:\s+\[(?P<meta>[^\]]*)\])?$')
 
-META_KV_PATTERN: re.Pattern = re.compile(r'(\w+)=(\w+)')
+META_KV_PATTERN: re.Pattern = re.compile(r'(\w+)=(\w+|-?\d+)')
 
 
-class Parser():
+class GraphParser():
     """
-    Parser class with functions to parse the input file,
+    GRAPH Parser class with functions to parse the input file,
     and the lines within it and build a workable game stat.
     Builds all hubs and edges of the graph.
     """
@@ -113,12 +111,12 @@ class Parser():
         if not lines:
             raise ParsingError("Empty file.")
         if not lines[0].startswith('nb_drones'):
-            raise ParsingError("First line must define number of agents \
-                                with 'nb_drones: <positive_integer>'.")
+            raise ParsingError("First line must define number of agents "
+                               "with 'nb_drones: <positive_integer>'.")
         for line in lines[1:]:
             if not any(line.startswith(val) for val in valid):
-                raise ParsingError(f"Bad line prefix in '{line}'\n \
-                                   Must be one of {[val for val in valid]}")
+                raise ParsingError(f"Bad line prefix in '{line}'\n"
+                                   f"Must be one of {[val for val in valid]}")
         return lines
 
     def _read_values(self) -> tuple[int, list[Hub], list[Edge]]:
@@ -141,15 +139,17 @@ class Parser():
                     self.parse_return_hub(line)
                     self._hubs.append(self.parse_return_hub(line))
                 except ValidationError as e:
-                    for err in e.errors():
-                        print(err['msg'])
+                    raise ParsingError(f"Hub validation failed:\nIn "
+                                       f"{e.errors()[0]['loc']}: "
+                                       f"{e.errors()[0]['msg']}") from e
             elif 'connection:' in line:
                 try:
                     self.parse_return_edge(line)
                     self._edges.append(self.parse_return_edge(line))
                 except ValidationError as e:
-                    for err in e.errors():
-                        print(err['msg'])
+                    raise ParsingError(f"Edge validation failed:\n In "
+                                       f"{e.errors()[0]['loc']}: "
+                                       f"{e.errors()[0]['msg']}") from e
         return nb_agents, self._hubs, self._edges
 
     def get_graph(self) -> 'GraphModel':
@@ -163,15 +163,15 @@ class Parser():
                               hubs=graph_vals[1],
                               edges=graph_vals[2])
         except ValidationError as err:
-            raise ParsingError(f"Graph validation failed:\n \
-                               In {err.errors()[0]['loc']}: \
-                                {err.errors()[0]['msg']}") from err
+            raise ParsingError(f"Graph validation failed:\n In "
+                               f"{err.errors()[0]['loc']}: "
+                               f"{err.errors()[0]['msg']}") from err
 
 
 if __name__ == "__main__":
     filename = "parser_test.txt"
     try:
-        parser = Parser(filename)
+        parser = GraphParser(filename)
     except Exception as e:
         print(e)
     # print(parser._hubs)

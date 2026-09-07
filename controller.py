@@ -96,6 +96,7 @@ class SimController():
         return self.turn_map[self.current_turn]
 
     def advance_turn(self) -> None:
+        print(self.output[self.current_turn])
         remaining_turns: list[int] = [
             t for t in self.turn_map if t > self.current_turn]
         if not remaining_turns:
