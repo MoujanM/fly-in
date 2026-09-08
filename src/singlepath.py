@@ -69,7 +69,8 @@ class PathFinder():
             path_steps.append(step)
         return path_steps
 
-    def single_agent_path(self, agent_id: str, constraints: list[Constraint]) -> tuple[list[PathStep], int]:
+    def single_agent_path(self, agent_id: str, constraints: list[Constraint]
+                          ) -> tuple[list[PathStep], int]:
         """
         Time-expanded A* algorithm.
         Takes agent_id and list of constraints for that agent,
@@ -79,16 +80,21 @@ class PathFinder():
             - list of hubs traversed with corresponding timestamp,
             - cost of total path movement.
         """
-        forbidden: set[tuple[str, int]] = {(c.position, c.t) for c in constraints if c.agent_id == agent_id}
+        forbidden: set[tuple[str, int]] = {
+            (c.position, c.t) for c in constraints if c.agent_id == agent_id}
         # think of v as state of <hub, timestamp>
-        v_start: tuple[Hub, int] = (next(h for h in self.hubs if h.kind == 'start_hub'), 0)
+        v_start: tuple[Hub, int] = (next(
+            h for h in self.hubs if h.kind == 'start_hub'), 0)
         v_goal: Hub = next(h for h in self.hubs if h.kind == 'end_hub')
 
-        came_from: dict[tuple[str, int], tuple[Hub, int] | None] = {(v_start[0].name, v_start[1]): None}
-        cost_sum: dict[tuple[str, int], int] = {(v_start[0].name, v_start[1]): 0}
+        came_from: dict[tuple[str, int], tuple[Hub, int] | None] = {
+            (v_start[0].name, v_start[1]): None}
+        cost_sum: dict[tuple[str, int], int] = {
+            (v_start[0].name, v_start[1]): 0}
 
         counter = itertools.count()     # tie-breaker
-        hq: list[tuple[float, int, tuple[Hub, int]]] = [(0.0, next(counter), v_start)]  # (priority, tiebreaker, state)
+        hq: list[tuple[float, int, tuple[Hub, int]]] = [
+            (0.0, next(counter), v_start)]  # (priority, tiebreaker, state)
 
         while hq:
             priority, _, current_state = heapq.heappop(hq)
@@ -103,7 +109,7 @@ class PathFinder():
                     # wait action costs 1
                     turns: int | None = 1
                 else:
-                    turns= self._move_cost(h)
+                    turns = self._move_cost(h)
                 if turns is None:
                     continue
                 new_state_key = (h.name, t + turns)
@@ -116,10 +122,12 @@ class PathFinder():
                     # if turns == 2 and (edge_name, t) in forbidden:
                     #     continue
                 new_cost = cost_sum[(curr_hub.name, t)] + turns
-                if (new_state_key not in cost_sum or new_cost < cost_sum[new_state_key]):
+                if (new_state_key not in cost_sum or
+                        new_cost < cost_sum[new_state_key]):
                     cost_sum[(new_state_key)] = new_cost
                     priority = new_cost + self._heuristic(h, v_goal)
-                    heapq.heappush(hq, (priority, next(counter), (h, t + turns)))
+                    heapq.heappush(hq, (priority, next(counter),
+                                        (h, t + turns)))
                     came_from[new_state_key] = current_state
         path_steps = self._build_path(agent_id, came_from, goal_state)
 
@@ -127,9 +135,9 @@ class PathFinder():
 
 
 if __name__ == "__main__":
-    from src.parser import Parser
+    from src.parser import GraphParser
     filename = "./maps/easy/02_simple_fork.txt"
-    parser = Parser(filename)
+    parser = GraphParser(filename)
     solver = PathFinder(parser._graph)
     # print(solver.agent_ids)
     for agent in solver.agent_ids:

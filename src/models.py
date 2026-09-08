@@ -10,7 +10,7 @@ class ParsingError(Exception):
         self.msg = msg
         super().__init__(msg)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"ParsingError: {self.msg}"
 
 

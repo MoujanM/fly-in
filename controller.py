@@ -133,5 +133,5 @@ class SimController():
         return (f"Turn {self.current_turn} / {self.max_turn}"
                 f" (nb_agents: {len(self.agents)})")
 
-    def sim_complete(self) -> bool:
-        return self.delivered == set(self.agents)
+    # def sim_complete(self) -> bool:
+    #     return self.delivered == set(self.agents)

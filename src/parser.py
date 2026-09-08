@@ -67,7 +67,7 @@ class GraphParser():
         except ValidationError as e:
             raise e
 
-    def parse_return_edge(self, edge_str) -> Edge:
+    def parse_return_edge(self, edge_str: str) -> Edge:
         m: re.Match | None = EDGE_PATTERN.match(edge_str)
         if not m:
             raise ParsingError(f"Malformed connection line: {edge_str}\n \

@@ -33,4 +33,5 @@ lint:
 	@echo "Checking flake8 ..."
 	flake8 .
 	@echo "Checking mypy ..."
-	uv run mypy .
+	mypy . --warn-return-any --warn-unused-ignores --ignore-missing-imports \
+	--disallow-untyped-defs --check-untyped-defs
