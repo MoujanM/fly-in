@@ -14,6 +14,14 @@ class CBS(PathFinder):
         - low-level; searches paths for individual agents (parent class)
     """
     def __init__(self, puzzle: GraphModel):
+        """Initialize CBS lookup tables for a validated graph.
+
+        Args:
+            puzzle: Graph to route all agents through.
+
+        Returns:
+            None.
+        """
         super().__init__(puzzle)
         self._hub_lookup: dict[str, Hub] = {h.name: h for h in self.hubs}
         self._edge_lookup: dict[str, Edge] = {e.name: e for e in self.edges}
@@ -22,11 +30,13 @@ class CBS(PathFinder):
                    constraints: list[Constraint]) -> tuple[
                        dict[str, list[PathStep]],
                        dict[str, int]]:
-        """
-        Function to call single agent path-finder for all the agents in map.
-        Takes a list of constraints and returns a tuple of two dicts:
-            - dict of agent_id and corresponding time-stamped paths
-            - dict of agent_id and corresponding path movement cost.
+        """Find paths for every agent under a shared constraint set.
+
+        Args:
+            constraints: Hub or connection reservations to apply to the search.
+
+        Returns:
+            A tuple containing each agent's path and its movement cost.
         """
 
         paths: dict[str, list[PathStep]] = {}
@@ -40,12 +50,13 @@ class CBS(PathFinder):
     def _detect_conflict(self,
                          joint_plan: dict[str, list[PathStep]]
                          ) -> Conflict | None:
-        """
-        Function takes complete joint plan for all agents and
-        and builds list of constraints.
-        For each timestamp, counts the occupancy of each hub.
-        If the count exceeds hub's max_drones, that is a conflict detected.
-        Returns a list of constraints as <id, hub, timestamp>.
+        """Find the first hub-capacity or connection-overlap conflict.
+
+        Args:
+            joint_plan: Timestamped path for each agent.
+
+        Returns:
+            The first detected conflict, or ``None`` when the plan is valid.
         """
         # {<hub.name, timestamp>: [agent_id]}
         occupied_hubs: dict[tuple[str, int], list[str]] = {}
@@ -83,7 +94,12 @@ class CBS(PathFinder):
         return None
 
     def solve(self) -> CBSResult | None:
-        # orchestrator - actual implementation
+        """Search for a minimum-cost conflict-free plan.
+
+        Returns:
+            A conflict-free result, or ``None`` if the iteration limit is
+            reached without finding a solution.
+        """
         root_paths, root_cost_pa = self._all_paths([])
         root: CBSNode = CBSNode(
             constraints=[],

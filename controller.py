@@ -1,12 +1,24 @@
 from src.models import GraphModel, PathStep, CBSResult
 
 
-class SimController():
+class SimController:
+    """Manage simulation state for the visualizer.
+
+    Args:
+        graph: Validated graph containing the simulation's hubs.
+        result: Conflict-free plan produced by the CBS solver.
     """
-    Class responsible for managing sim states.
-    Gets states from src/ and hands to visualizer.
-    """
+
     def __init__(self, graph: GraphModel, result: CBSResult):
+        """Build turn-indexed state from a solved joint plan.
+
+        Args:
+            graph: Validated graph containing the simulation's hubs.
+            result: Conflict-free plan produced by the CBS solver.
+
+        Returns:
+            None.
+        """
         self.result: CBSResult = result
         self.agents: list[str] = list(result.joint_plan.keys())
         self.turn_map: dict[int, list[PathStep]] = self._get_turn_map()
@@ -22,7 +34,11 @@ class SimController():
             self._agent_positions[agent] = start_name
 
     def _get_turn_map(self) -> dict[int, list[PathStep]]:
-        # return dict of {turn_nb: list[steps]}
+        """Expand each plan into the steps visible at every turn.
+
+        Returns:
+            A mapping from turn number to the path steps active then.
+        """
         turn_map: dict[int, list[PathStep]] = {}
         for agent, path in self.result.joint_plan.items():
             for step in path:
@@ -50,7 +66,11 @@ class SimController():
         return turn_map
 
     def get_turn_state(self) -> dict[str, list[str]]:
-        # return dict of {hub.name: list[agent_id]} for current turn
+        """Return undelivered agents grouped by their current position.
+
+        Returns:
+            A mapping from hub or connection name to agent identifiers.
+        """
         state: dict[str, list[str]] = {}
         for agent, pos in self._agent_positions.items():
             if agent not in self.delivered:
@@ -58,13 +78,22 @@ class SimController():
         return state
 
     def final_state(self) -> dict[str, list[str]]:
-        # no delivered filter
+        """Return all agents grouped by their final recorded position.
+
+        Returns:
+            A mapping from position name to agent identifiers.
+        """
         state: dict[str, list[str]] = {}
         for agent, position in self._agent_positions.items():
             state.setdefault(position, []).append(agent)
         return state
 
     def _get_sim_desc(self) -> list[str]:
+        """Create printable movement descriptions for each active turn.
+
+        Returns:
+            One human-readable movement description per simulation turn.
+        """
         turn_map: dict[int, list[PathStep]] = {}
         for agent, path in self.result.joint_plan.items():
             for step in path:
@@ -93,9 +122,22 @@ class SimController():
         return simualation
 
     def get_turn_steps(self) -> list[PathStep]:
+        """Return the path steps scheduled for the current turn.
+
+        Returns:
+            Path steps active at ``current_turn``.
+        """
         return self.turn_map[self.current_turn]
 
     def advance_turn(self) -> None:
+        """Advance the simulation to its next scheduled turn.
+
+        Delivered agents are removed from the active view, and agents still
+        travelling are represented by their connection name.
+
+        Returns:
+            None.
+        """
         print(self.output[self.current_turn])
         remaining_turns: list[int] = [
             t for t in self.turn_map if t > self.current_turn]
@@ -125,11 +167,21 @@ class SimController():
         return None
 
     def jump_to_end(self) -> None:
+        """Move the simulation directly to its completed state.
+
+        Returns:
+            None.
+        """
         self.current_turn = self.max_turn
         self.delivered = set(self.agents)
         return None
 
     def turn_header(self) -> str:
+        """Format the current turn and agent count for the visualizer.
+
+        Returns:
+            A display-ready simulation status string.
+        """
         return (f"Turn {self.current_turn} / {self.max_turn}"
                 f" (nb_agents: {len(self.agents)})")
 

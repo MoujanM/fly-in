@@ -2,14 +2,21 @@ from src.models import GraphModel, Hub, Edge
 
 
 class Renderer:
+    """Convert graph coordinates into positions suitable for Pygame rendering.
+
+    Args:
+        graph: Validated graph whose hubs should be positioned.
     """
-    Parent Renderer - takes graph and computes & stores the following:
-        - size of Display Surface
-        - pixel scalar and grid offset values
-        - pixel coordinates of hubs
-    These are passed to child classes for easy & fast drawing.
-    """
+
     def __init__(self, graph: GraphModel) -> None:
+        """Initialize display geometry and the default camera position.
+
+        Args:
+            graph: Validated graph whose hubs should be positioned.
+
+        Returns:
+            None.
+        """
         self.h: list[Hub] = graph.hubs
         self.e: list[Edge] = graph.edges
 
@@ -21,15 +28,35 @@ class Renderer:
         self.zoom: float = 1.0
 
     def _logical_to_world(self, x: int, y: int) -> tuple[int, int]:
+        """Scale logical map coordinates into world pixels.
+
+        Args:
+            x: Logical horizontal coordinate.
+            y: Logical vertical coordinate.
+
+        Returns:
+            The scaled world-coordinate pair.
+        """
         return (x * self._scale, y * self._scale)
 
     def world_to_camera(self, wx: int, wy: int) -> tuple[float, float]:
+        """Apply zoom and camera offset to world coordinates.
+
+        Args:
+            wx: World horizontal coordinate.
+            wy: World vertical coordinate.
+
+        Returns:
+            Coordinates in the display's camera space.
+        """
         return ((wx * self.zoom + self.camera_x),
                 (wy * self.zoom + self.camera_y))
 
     def _init_camera(self) -> tuple[float, float]:
-        """
-        Function to compute where in the screen to put drawings.
+        """Center the graph's bounding box in the display.
+
+        Returns:
+            Camera offsets that center the graph on screen.
         """
         min_x: int = min(h.x for h in self.h)
         max_x: int = max(h.x for h in self.h)
@@ -46,6 +73,14 @@ class Renderer:
         return (camera_x, camera_y)
 
     def zoom_point(self, z_factor: float) -> None:
+        """Change zoom while keeping the display center as the pivot.
+
+        Args:
+            z_factor: Multiplicative change to the current zoom level.
+
+        Returns:
+            None.
+        """
         screen_w, screen_h = self.display_size
         pivot: tuple[int, int] = (screen_w // 2, screen_h // 2)
         px, py = pivot
@@ -59,6 +94,11 @@ class Renderer:
         return None
 
     def _get_h_positions(self) -> dict[str, tuple[int, int]]:
+        """Calculate world-pixel positions for every hub.
+
+        Returns:
+            A mapping from hub name to world-pixel coordinates.
+        """
         positions: dict[str, tuple[int, int]] = {}
         for h in self.h:
             pixels = self._logical_to_world(h.x, h.y)

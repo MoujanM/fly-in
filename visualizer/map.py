@@ -4,12 +4,21 @@ from visualizer.renderer import Renderer
 
 
 class Map:
+    """Render the static hubs and connections of a graph.
+
+    Args:
+        graph: Validated graph to render.
     """
-    Responsible for rendering the static map.
-    Draws the hubs (with corresponding colors)
-    and connections between them (edges).
-    """
+
     def __init__(self, graph: GraphModel) -> None:
+        """Prepare graph geometry, colors, and the label font.
+
+        Args:
+            graph: Validated graph to render.
+
+        Returns:
+            None.
+        """
         pygame.font.init()
         self.h: list[Hub] = graph.hubs
         self.e: list[Edge] = graph.edges
@@ -19,6 +28,15 @@ class Map:
 
     def _draw_hubs(self, display_surface: pygame.Surface,
                    renderer: Renderer) -> None:
+        """Draw each hub, its name, and its drone capacity.
+
+        Args:
+            display_surface: Surface on which hubs should be drawn.
+            renderer: Coordinate transformer for the current camera view.
+
+        Returns:
+            None.
+        """
         hub_width: int = 60
         hub_height: int = 60
 
@@ -46,6 +64,15 @@ class Map:
 
     def _draw_edges(self, display_surface: pygame.Surface,
                     renderer: Renderer) -> None:
+        """Draw every graph connection as a line.
+
+        Args:
+            display_surface: Surface on which edges should be drawn.
+            renderer: Coordinate transformer for the current camera view.
+
+        Returns:
+            None.
+        """
         for e in self.e:
             p_start: tuple[int, int] = renderer.h_positions[e.hub_a.name]
             p_end: tuple[int, int] = renderer.h_positions[e.hub_b.name]

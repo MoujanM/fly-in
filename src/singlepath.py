@@ -18,6 +18,14 @@ class PathFinder():
     """
 
     def __init__(self, puzzle: GraphModel) -> None:
+        """Initialize graph structures used by single-agent A* search.
+
+        Args:
+            puzzle: Validated graph to search.
+
+        Returns:
+            None.
+        """
         self.agent_ids: list[str] = []
         for i in range(1, puzzle.nb_agents + 1):
             self.agent_ids.append(f"D{i}")
@@ -27,6 +35,11 @@ class PathFinder():
         self.adj_map: dict[str, list[Hub]] = self._build_adj()
 
     def _build_adj(self) -> dict[str, list[Hub]]:
+        """Build an adjacency list from the graph's bidirectional edges.
+
+        Returns:
+            A mapping from hub name to neighboring hubs.
+        """
         adj_map: dict[str, list[Hub]] = {}
         for e in self.edges:
             adj_map.setdefault(e.hub_a.name, []).append(e.hub_b)
@@ -34,8 +47,15 @@ class PathFinder():
         return adj_map
 
     def _heuristic(self, v1: Hub, v2: Hub) -> float:
-        # Calculates manhattan distance between two vertices
-        # tie-breaker added after updating zone costs
+        """Estimate the remaining movement cost between two hubs.
+
+        Args:
+            v1: Current hub.
+            v2: Goal hub.
+
+        Returns:
+            Manhattan distance with a small zone-based tie-breaker.
+        """
         distance = abs(v1.x - v2.x) + abs(v1.y - v2.y)
         bonus: float = 0
         if v1.zone == 'priority':
@@ -45,6 +65,14 @@ class PathFinder():
         return float(distance) + bonus
 
     def _move_cost(self, h: Hub) -> int | None:
+        """Return the movement cost associated with a hub's zone.
+
+        Args:
+            h: Hub being entered.
+
+        Returns:
+            The number of turns required, or ``None`` for blocked zones.
+        """
         z_cost_lookup: dict[str, int] = {
             z.value[0]: z.value[1] for z in ZoneCost}
         return z_cost_lookup[h.zone]
@@ -52,6 +80,16 @@ class PathFinder():
     def _build_path(self, agent_id: str, came_from: dict[tuple[str, int],
                     tuple[Hub, int] | None],
                     goal_state: tuple[Hub, int]) -> list[PathStep]:
+        """Reconstruct timestamped path steps from A* predecessor links.
+
+        Args:
+            agent_id: Identifier of the agent whose path was searched.
+            came_from: Predecessor mapping keyed by hub name and time.
+            goal_state: Goal hub and arrival time.
+
+        Returns:
+            Ordered path steps from the start hub to the goal.
+        """
 
         path: list[tuple[Hub, int]] = []
         crumbs: tuple[Hub, int] | None = goal_state
@@ -71,14 +109,14 @@ class PathFinder():
 
     def single_agent_path(self, agent_id: str, constraints: list[Constraint]
                           ) -> tuple[list[PathStep], int]:
-        """
-        Time-expanded A* algorithm.
-        Takes agent_id and list of constraints for that agent,
-        returns agent's path through graph; start -> goal.
+        """Find a minimum-cost path with time and position constraints.
 
-        return value is a tuple:
-            - list of hubs traversed with corresponding timestamp,
-            - cost of total path movement.
+        Args:
+            agent_id: Identifier of the agent to route.
+            constraints: Hub or connection reservations to avoid.
+
+        Returns:
+            A tuple containing timestamped path steps and total path cost.
         """
         forbidden: set[tuple[str, int]] = {
             (c.position, c.t) for c in constraints if c.agent_id == agent_id}

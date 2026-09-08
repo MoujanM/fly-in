@@ -5,18 +5,35 @@ from visualizer.map import Map
 
 
 class Agents:
+    """Render dynamic agent counts and simulation status.
+
+    Args:
+        graph: Validated graph used to create the static map renderer.
     """
-    Class responsible for adding specs on the graph.
-    These will reflect turn changes and include:
-        - turn number header
-        - number of agents (drones) at position per turn.
-    Inherits from Map.
-    """
+
     def __init__(self, graph: GraphModel) -> None:
+        """Create the static map resources used by dynamic rendering.
+
+        Args:
+            graph: Validated graph used for hub styling and fonts.
+
+        Returns:
+            None.
+        """
         self._map = Map(graph)
 
     def _turn_counter(self, display_surface: pygame.Surface,
                       renderer: Renderer, turn_header: str) -> None:
+        """Draw the current turn header at the bottom of the display.
+
+        Args:
+            display_surface: Surface on which the header should be drawn.
+            renderer: Renderer providing display dimensions and margins.
+            turn_header: Text describing the current simulation turn.
+
+        Returns:
+            None.
+        """
         header = self._map.font.render(turn_header, True, "black", None)
         header_rect = header.get_rect(
             center=(renderer.display_size[0] // 2,
@@ -28,7 +45,16 @@ class Agents:
     def _turn_blits(self, display_surface: pygame.Surface,
                     renderer: Renderer, turn_state: dict[str, list[str]]
                     ) -> None:
-        # dynamic path-badge text renderer
+        """Draw an agent-count badge at each occupied position.
+
+        Args:
+            display_surface: Surface on which badges should be drawn.
+            renderer: Renderer providing hub positions and camera transforms.
+            turn_state: Mapping from positions to agents at those positions.
+
+        Returns:
+            None.
+        """
         for pos, agent in turn_state.items():
             if pos in renderer.h_positions:
                 cx, cy = renderer.h_positions[pos]
