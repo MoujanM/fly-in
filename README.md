@@ -1,105 +1,236 @@
 *This project has been created as part of the 42 curriculum by mmirdama.*
 
-# FLY-IN
-Drone routing and visualization in Python
+# FLY-IN 🚁
+
+> Multi-agent drone routing simulation with interactive visualisation
+
+---
 
 ## Description
 
-Fly-in is a Multi-agent Path Finding (MAPF) project presented as a drone-routing simulation. It finds a coordinated path from `start` to `goal` for a given number of drones on a graph of hubs and connections, while respecting hub capacity and timing constraints.
+Fly-in is a Multi-Agent Path Finding (MAPF) project implemented as a drone-routing simulator. Given a map of hubs and connections, the program finds a coordinated, conflict-free path for a fleet of drones from a single `start_hub` to a shared `goal_hub`, respecting per-hub capacity limits, connection capacity limits, and zone-type movement costs.
 
-The program parses a map file, computes a conflict-free plan, and opens an interactive Pygame visualization. The simulation displays the number of drones at each hub or in transit on a connection, while the terminal summary reports the makespan and cost for each agent.
+The program parses a plain-text map file, solves the routing problem using a two-level algorithm, and opens an interactive Pygame window showing the simulation turn by turn. When the window is closed, the terminal prints a full movement summary.
 
-### Algorithm choices and implementation strategy
+---
 
-Fly-in uses a two-level pathfinding strategy. First, a time-expanded A* search finds a route for each drone. Each search state contains a hub and a timestamp, which allows the solver to model waiting, restricted zones that take two turns to cross, and normal or priority zones that take one turn to enter. A Manhattan-distance heuristic based on hub coordinates guides the search toward the destination, while blocked zones are excluded from available moves. The search also accepts time-and-position constraints so an individual route can be recalculated around an existing conflict.
+## Algorithm Choices and Implementation Strategy
 
-The multi-agent solver uses Conflict-Based Search (CBS) to combine the individual routes. It detects conflicts when drones exceed a hub's capacity at the same time or occupy the same connection during overlapping intervals. For each conflict, CBS adds a time-and-position constraint for the excess drone, reruns its low-level A* search, and stores the resulting plan in a priority queue ordered by total cost. The search stops after 100 high-level iterations if no solution has been found. A successful result contains the joint movement plan, each drone's cost, the total cost, and the makespan.
+### Low-level search — Time-expanded A\*
 
-### Visual representation and user experience
+Each drone's individual route is planned using a **time-expanded A\* search**. Rather than treating the graph as a static set of locations, the search state is a pair `(hub, timestep)`, which allows the solver to model:
 
-The Pygame visualizer presents the map as a connected graph: hubs are colored rounded rectangles, connections are drawn between them, and hub capacity labels are shown beside the hubs. Hub names and capacities make the map's rules visible while the simulation is running, so users can relate the solver's decisions to the underlying puzzle.
+- **Waiting** — staying at a hub for one turn when movement is blocked or suboptimal.
+- **Zone costs** — entering a `normal` or `priority` hub costs 1 turn; entering a `restricted` hub costs 2 turns and commits the drone to a connection for the intermediate turn.
+- **Blocked zones** — hubs marked `blocked` are excluded from available moves.
+- **Constraints** — the search accepts a set of `(position, timestep)` prohibitions injected by the high-level solver, so a drone's route can be recalculated around an existing conflict.
 
-At each turn, drones are represented by count badges on their current hub. Drones traveling across a connection are displayed at the connection's midpoint, making multi-turn movement visible rather than appearing as an unexplained jump. A turn counter shows the current turn, the total number of turns, and the number of drones. The view supports the following controls:
+A Manhattan-distance heuristic (with a small ±0.1 tie-breaking bias for priority and restricted zones) guides expansion toward the goal while keeping the heuristic admissible.
 
-- Press `Space` to advance one scheduled turn.
-- Press `E` to jump to the completed state.
-- Hold the arrow keys to pan the camera.
-- Press `R` to recenter the camera and reset zoom.
-- Use the mouse wheel to zoom between 0.1x and 5x.
-- Close the window to stop the simulation and print its summary.
+### High-level search — Conflict-Based Search (CBS)
 
+Individual routes are combined into a joint plan using **Conflict-Based Search**. CBS operates on a priority queue of *constraint nodes*, each representing a complete multi-agent plan under a specific set of constraints. At each iteration:
+
+1. The cheapest node is popped from the queue.
+2. The joint plan is checked for conflicts:
+   - **Hub conflicts** — more drones occupying a hub at the same timestep than `max_drones` permits.
+   - **Edge conflicts** — drones whose restricted-zone traversal intervals overlap on the same connection, exceeding `max_link_capacity`.
+3. If no conflict exists, the plan is returned as the solution.
+4. Otherwise, a constraint is added for each excess agent at the conflicting position and time, the affected routes are replanned, and a new node is pushed onto the queue.
+
+This guarantees that capacity constraints at both hubs and connections are respected, and that drones committed to a restricted-zone transit cannot be diverted mid-connection.
+
+---
+
+## Visual Representation
+
+The Pygame visualiser renders the map as a connected graph and updates it turn by turn.
+
+| Feature | Detail |
+|---|---|
+| Hubs | Colored zones matching map metadata; each bearing name + capacity captions |
+| Edges | Connection capacity shown at the midpoint |
+| Drone badges | Count badge on each occupied hub each turn |
+| In-transit drones | Badge shown at the edge midpoint during restricted-zone traversal |
+| Turn counter | Current turn, total turns, and active drone count displayed at the bottom of screen |
+| Camera controls | Pan, zoom, and reset — see Controls below |
+
+Displaying drones at the connection midpoint during multi-turn movement makes the restricted-zone mechanic visible rather than appearing as an unexplained gap in a drone's journey. Capacity labels let users relate the solver's decisions to the map's rules without consulting the source file.
+
+### Controls
+
+| Key / Input | Action |
+|---|---|
+| `Space` | Advance one turn |
+| `E` | Jump to the final state |
+| Arrow keys (hold) | Pan the camera |
+| Mouse wheel | Zoom in / out (0.1× – 5×) |
+| `R` | Reset camera and zoom |
+| Close window | End visualisation and print summary |
+
+---
 
 ## Instructions
 
 ### Requirements
 
-- Python 3.13 or newer
-- `uv` for dependency and virtual-environment management
-- A graphical environment for the Pygame visualizer
+- Python **3.13** or newer
+- [`uv`](https://github.com/astral-sh/uv) for dependency and virtual-environment management
+- A graphical environment capable of opening a Pygame window
 
 ### Installation
-
-Install the project dependencies with:
 
 ```sh
 make install
 ```
 
-The `install` target installs `uv` automatically when it is not already available, then runs `uv sync`.
+This installs `uv` if it is not already available, then runs `uv sync` to create a virtual environment and install all dependencies.
 
 ### Running the simulation
-
-Start the application with:
 
 ```sh
 make run
 ```
 
-Pass the path to a map file as the positional argument. For example:
+The solver parses the map, computes conflict-free routes, and opens the visualisation window. Close the window to print the movement summary. 
 
-```text
-maps/easy/01_linear_path.txt
+The `make` command loads a default map passed as a required argument. The program also accepts command-line flags directly:
+
+```sh
+uv run fly_in.py [--verbose] [--cost-per-agent] <map>
 ```
 
-The solver parses the map, calculates conflict-free routes for all drones, and opens the visualization window. In the visualizer:
+| Flag | Effect |
+|---|---|
+| `--verbose` | Print makespan and total cost after the movement summary |
+| `--cost-per-agent` | Print individual cost for each drone |
 
-- Press `Space` to advance one turn.
-- Press `E` to jump to the end of the simulation.
-- Use the arrow keys to pan, the mouse wheel to zoom, and `R` to reset the view.
-- Close the window to finish and print the simulation summary.
+Example:
 
-The summary includes each turn's movements, the makespan, the cost per agent, and the total cost.
+```sh
+uv run fly_in.py --verbose --cost-per-agent maps/medium/02_circular_loop.txt
+```
 
-### Map format
+---
 
-Map files are plain text files. Blank lines and lines beginning with `#` are ignored. The first meaningful line must define the number of drones, followed by hub and connection declarations:
+## Map Format
+
+Map files are plain text. Blank lines and lines beginning with `#` are ignored. The first meaningful line must declare the drone count.
 
 ```text
+# Example map
 nb_drones: 2
+
 start_hub: start 0 0 [color=green max_drones=2]
-hub: middle 1 0 [zone=restricted color=orange]
-end_hub: goal 2 0 [color=red max_drones=2]
+hub:       middle 1 0 [zone=restricted color=orange]
+end_hub:   goal   2 0 [color=red max_drones=2]
+
 connection: start-middle
 connection: middle-goal
 ```
 
-Hub declarations use `<kind>: <name> <x> <y> [metadata]`, where `kind` is `start_hub`, `hub`, or `end_hub`. Supported hub metadata includes `zone`, `color`, and `max_drones`. Zones are `normal`, `priority`, `restricted`, and `blocked`; restricted hubs take two turns to enter, while blocked hubs cannot be entered. Connection declarations use `connection: <hub_a>-<hub_b>` and may include `max_link_capacity` metadata. The parser validates hub names, references, duplicate connections, and the requirement for exactly one start and one end hub before creating the graph model.
+### Hub declaration
 
-Existing examples are organized in `maps/easy`, `maps/medium`, `maps/hard`, and `maps/challenger`.
-
-### Development commands
-
-```sh
-make debug  # Run with the Python debugger
-make lint   # Run flake8 and mypy
-make clean  # Remove Python caches and temporary compiled files
+```
+<kind>: <name> <x> <y> [metadata]
 ```
 
-The pathfinding implementation uses time-expanded A* for individual drone routes and Conflict-Based Search to resolve hub-capacity and connection-overlap conflicts. A* can wait at a hub, account for zone movement costs, and avoid CBS constraints. CBS applies each accumulated constraint set, recomputes the agents' paths, and chooses the lowest-total-cost plan from its search queue.
+| Field | Values |
+|---|---|
+| `kind` | `start_hub`, `hub`, `end_hub` |
+| `name` | Unique identifier — no hyphens |
+| `x`, `y` | Integer grid coordinates |
+| `zone` | `normal` (default), `priority`, `restricted`, `blocked` |
+| `color` | Any Pygame-recognised colour name |
+| `max_drones` | Maximum simultaneous occupants (default: 1) |
 
+### Connection declaration
+
+```
+connection: <hub_a>-<hub_b> [max_link_capacity=N]
+```
+
+The parser validates that both hub names exist, that connections are not duplicated, and that exactly one `start_hub` and one `end_hub` are present. Errors raise a `ParsingError` with a descriptive message before any solving begins.
+
+---
+
+## Example Input and Output
+
+**Map** — `maps/easy/01_linear_path.txt`
+
+```text
+nb_drones: 2
+
+start_hub: start     0 0 [color=green max_drones=2]
+hub:       waypoint1 1 0 [color=blue]
+hub:       waypoint2 2 0 [color=blue]
+end_hub:   goal      3 0 [color=red max_drones=2]
+
+connection: start-waypoint1
+connection: waypoint1-waypoint2
+connection: waypoint2-goal
+```
+
+**Terminal output** (with `--verbose`):
+
+```text
+D1-waypoint1 D2-waypoint1
+D1-waypoint2 D2-waypoint2
+D1-goal D2-goal
+Makespan: 3
+Total cost: 6
+```
+
+Each line represents one simulation turn. Drones that do not move in a given turn are omitted. A drone that has reached the goal is no longer tracked.
+
+For a restricted-zone map, in-transit moves appear in the format `D1-start-loop_a` (drone identifier, origin, destination) to indicate the drone is occupying the connection during that turn.
+
+---
+
+## Project Structure
+
+```
+fly-in/
+├── src/
+│   ├── models.py        # Pydantic data models (Hub, Edge, GraphModel, PathStep …)
+│   ├── parser.py        # Map file parser and validator
+│   ├── singlepath.py    # Time-expanded A* and path reconstruction
+│   └── cbs.py           # Conflict-Based Search solver
+├── visualizer/
+│   ├── renderer.py      # Base renderer (scale, camera, coordinate transforms)
+│   ├── map.py           # Static map drawing (hubs, edges, captions)
+│   └── agents.py        # Dynamic drone badges and turn counter
+├── controller.py        # Simulation state manager (turn map, positions, output)
+├── fly_in.py            # Entry point and argument parsing
+├── maps/                # Bundled puzzle maps (easy / medium / hard / challenger)
+└── Makefile
+```
+
+---
 
 ## Resources
-- [MAPF solutions overview](https://www.researchgate.net/publication/348716625_Survey_of_the_Multi-Agent_Pathfinding_Solutions)
-- [Conflict-Based Search Algorithm](https://www.cse.iitk.ac.in/users/cs365/2013/hw2/sharon-stern-12_multi-agent-path-finding-conflict-based.pdf)
-- [Intro to PyGame](https://eng.libretexts.org/Bookshelves/Computer_Science/Programming_Languages/Making_Games_with_Python_and_Pygame_(Sweigart)/03%3A_Pygame_Basics/3.14%3A_Primitive_Drawing_Functions)
-- [PyGame Documentation](https://www.pygame.org/docs/)
+
+### Algorithms and theory
+
+- Sharon, G., Stern, R., Felner, A., & Sturtevant, N. (2015). Conflict-based search for optimal multi-agent pathfinding. *Artificial Intelligence*, 219, 40–66. — foundational CBS paper.
+- Stern, R. et al. (2019). [Multi-Agent Pathfinding: Definitions, Variants, and Benchmarks](https://www.researchgate.net/publication/348716625_Survey_of_the_Multi-Agent_Pathfinding_Solutions) — MAPF survey covering CBS and related algorithms.
+- Red Blob Games — [Introduction to A\*](https://www.redblobgames.com/pathfinding/a-star/introduction.html) — accessible visual explanation of A* and heuristics.
+- [CBS algorithm — IIT Kanpur course material](https://www.cse.iitk.ac.in/users/cs365/2013/hw2/sharon-stern-12_multi-agent-path-finding-conflict-based.pdf)
+
+### Libraries
+
+- [Pygame documentation](https://www.pygame.org/docs/)
+- [Pydantic documentation](https://docs.pydantic.dev/)
+- [Python `heapq` module](https://docs.python.org/3/library/heapq.html)
+- [Python `re` module — Regular expression HOWTO](https://docs.python.org/3/howto/regex.html)
+
+### AI usage
+
+Claude (Anthropic) was used throughout this project as a pair-programming and tutoring tool. Specific uses included:
+
+- **Algorithm design** — conceptual explanations of time-expanded A\*, CBS tree structure, conflict detection, and constraint propagation; the underlying logic was implemented independently after discussion.
+- **Regex parsing** — tutorial on named capture groups and non-capturing groups for the map file parser.
+- **Pygame visualiser** — conceptual explanation of the game loop, coordinate transform pipeline (logical → world → screen), camera/zoom design, and blit ordering; code was written independently.
+- **Code review** — structural feedback on class responsibilities, separation of concerns between solver, controller, and visualiser layers.
+
+All algorithmic implementations, data structures, and final code are the author's own work. AI was not used to generate complete implementations directly.

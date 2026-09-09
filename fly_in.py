@@ -139,7 +139,7 @@ class FlyIn:
         """Print makespan and cost information for a completed plan.
 
         Args:
-            result: Solved plan whose metrics should be displayed.
+            control: Simulation state controller.
 
         Returns:
             None.
