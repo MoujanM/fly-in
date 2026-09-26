@@ -20,7 +20,7 @@ class Renderer:
         self.h: list[Hub] = graph.hubs
         self.e: list[Edge] = graph.edges
 
-        self.display_size: tuple[int, int] = (1500, 800)
+        self.display_size: tuple[int, int] = (1000, 800)
         self._scale: int = 140
         self._margin: int = 40
         self.h_positions: dict[str, tuple[int, int]] = self._get_h_positions()

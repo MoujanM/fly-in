@@ -23,8 +23,14 @@ class Map:
         self.h: list[Hub] = graph.hubs
         self.e: list[Edge] = graph.edges
         self.h_color_dict: dict[str, pygame.Color] = {
-            h.name: pygame.Color(h.color) for h in self.h}
+            h.name: self._get_safe_color(h.color) for h in self.h}
         self.font: pygame.font.Font = pygame.font.SysFont('notomono', 11)
+
+    def _get_safe_color(self, color: str) -> pygame.Color:
+        try:
+            return pygame.Color(color)
+        except ValueError:
+            return pygame.Color("white")
 
     def _draw_hubs(self, display_surface: pygame.Surface,
                    renderer: Renderer) -> None:
@@ -48,17 +54,17 @@ class Map:
                         scy - hub_height // 2, hub_width, hub_height)
             pygame.draw.rect(display_surface, color, hub_rect, border_radius=8)
 
-            name_txt = self.font.render(h.name, True, color, None)
+            name_txt = self.font.render(h.name, True, "darkblue", None)
             name_rect = name_txt.get_rect(center=(scx, scy - 40))
-            pygame.draw.rect(display_surface, "darkslategrey", name_rect)
+            pygame.draw.rect(display_surface, "cornsilk3", name_rect)
             display_surface.blit(name_txt, name_rect)
 
             if h.max_drones is not None:
-                info_txt = self.font.render(f"Capacity: {h.max_drones}",
+                info_txt = self.font.render(f"zn={h.zone};cp={h.max_drones}",
                                             True,
-                                            self.h_color_dict[h.name], None)
+                                            "darkblue", None)
                 info_rect = info_txt.get_rect(center=(scx, scy + 40))
-                pygame.draw.rect(display_surface, "darkslategrey", info_rect)
+                pygame.draw.rect(display_surface, "cornsilk3", info_rect)
                 display_surface.blit(info_txt, info_rect)
         return None
 
@@ -80,14 +86,15 @@ class Map:
             s_end = renderer.world_to_camera(*p_end)
             pygame.draw.line(display_surface,
                              pygame.Color('white'), s_start, s_end, width=7)
-            # if e.max_capacity:
-            #     info_txt = self.font.render(f"Capacity: {e.max_capacity}",
-            #                                 True, "black", None)
-            #     info_rect = info_txt.get_rect(center=(
-            #         (s_start[0] + s_end[0]) // 2,
-            #         (s_start[1] + s_end[1]) // 2 + 10))
-            #     pygame.draw.rect(display_surface, "darkslategrey", info_rect)
-            #     display_surface.blit(info_txt, info_rect)
+            if e.max_capacity > 1 or (e.hub_a.zone == 'restricted'
+                                    or e.hub_b.zone == 'restricted'):
+                info_txt = self.font.render(f"cp: {e.max_capacity}",
+                                            True, "darkblue", None)
+                info_rect = info_txt.get_rect(center=(
+                    (s_start[0] + s_end[0]) // 2,
+                    (s_start[1] + s_end[1]) // 2 + 10))
+                pygame.draw.rect(display_surface, "cornsilk3", info_rect)
+                display_surface.blit(info_txt, info_rect)
         return None
 
 # if __name__ == "__main__":

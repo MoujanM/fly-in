@@ -34,11 +34,11 @@ class Agents:
         Returns:
             None.
         """
-        header = self._map.font.render(turn_header, True, "black", None)
+        header = self._map.font.render(turn_header, True, "darkblue", None)
         header_rect = header.get_rect(
             center=(renderer.display_size[0] // 2,
                     renderer.display_size[1] - renderer._margin))
-        pygame.draw.rect(display_surface, "white", header_rect)
+        pygame.draw.rect(display_surface, "cornsilk3", header_rect)
         display_surface.blit(header, header_rect)
         return None
 

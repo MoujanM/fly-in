@@ -107,22 +107,26 @@ class FlyIn:
             # 1. event handling
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
-                    if (event.key == pygame.K_SPACE and
-                            control.current_turn != control.max_turn):
-                        control.advance_turn()
-                    if event.key == pygame.K_e:
-                        control.jump_to_end()
+                    if (event.key == pygame.K_SPACE):
+                        if control.current_turn < control.max_turn:
+                            control.advance_turn()
+                            print(control.output[control.current_turn - 1])
+                        elif control.current_turn == control.max_turn:
+                            continue
+                    if event.key == pygame.K_ESCAPE:
+                        self.running = False
                 if event.type == pygame.MOUSEWHEEL:
                     z_factor: float = 1.1 if event.y > 0 else 0.9
                     self.renderer.zoom_point(z_factor)
                 if event.type == pygame.QUIT:
                     self.running = False
-            # 2. get state
-            if control.current_turn == control.max_turn:
-                turn_state = control.final_state()
-            else:
-                turn_state = control.get_turn_state()
+            # # 2. get state
+            # if control.current_turn == control.max_turn:
+            #     turn_state = control.final_state()
+            # else:
+            #     turn_state = control.get_turn_state()
             turn_header = control.turn_header()
+            turn_state = control.get_turn_state()
 
             # 3. draw from scratch
             display.fill("grey19")

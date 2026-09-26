@@ -6,30 +6,15 @@ from dataclasses import dataclass
 
 
 class ParsingError(Exception):
-    """Error raised when a map file cannot be parsed or validated.
-
-    Args:
-        msg: Explanation of the parsing or validation failure.
-    """
+    """Error raised when a map file cannot be parsed or validated."""
 
     def __init__(self, msg: str):
-        """Initialize an error with a human-readable message.
-
-        Args:
-            msg: Explanation of the parsing or validation failure.
-
-        Returns:
-            None.
-        """
+        """Initialize error with a human-readable message."""
         self.msg = msg
         super().__init__(msg)
 
     def __str__(self) -> str:
-        """Return the error message with its exception type.
-
-        Returns:
-            The formatted parsing error message.
-        """
+        """Return the error message with its exception type."""
         return f"ParsingError: {self.msg}"
 
 
@@ -54,32 +39,14 @@ class Hub(BaseModel):
     zone: Literal['normal', 'restricted',
                   'priority', 'blocked'] = Field(default='normal')
     color: str
-    max_drones: int = Field(default=1, ge=1)
+    max_drones: int | None
 
-    @model_validator(mode='after')
-    def check_name(self) -> 'Hub':
-        """Ensure the hub name is safe to use in connection identifiers.
-
-        Returns:
-            This validated hub.
-
-        Raises:
-            ValueError: If the name contains a dash or space.
-        """
-        if '-' in self.name or ' ' in self.name:
-            raise ValueError("Hub name cannot contain dashes or spaces.")
-        return self
-
-    @model_validator(mode='after')
-    def change_color(self) -> 'Hub':
-        """Replace the special rainbow color with a supported color.
-
-        Returns:
-            This validated hub.
-        """
-        if self.color == 'rainbow':
-            self.color = 'fuchsia'
-        return self
+    # @model_validator(mode='after')
+    # def check_name(self) -> 'Hub':
+    #     """Ensure the hub name is safe to use in connection identifiers."""
+    #     if '-' in self.name or ' ' in self.name:
+    #         raise ValueError("Hub name cannot contain dashes or spaces.")
+    #     return self
 
 
 class Edge(BaseModel):
@@ -112,26 +79,6 @@ class GraphModel(BaseModel):
     edges: list[Edge]
 
     @model_validator(mode='after')
-    def check_edges(self) -> 'GraphModel':
-        """Validate edge endpoints and reject duplicate connections.
-
-        Returns:
-            This validated graph.
-
-        Raises:
-            ValueError: If an endpoint is unknown or a connection is repeated.
-        """
-        hub_names = [h.name for h in self.hubs]
-        for e in self.edges:
-            if e.hub_a.name not in hub_names or e.hub_b.name not in hub_names:
-                raise ValueError(f"Found invalid connection in graph: {e}")
-        for e1, e2 in zip(self.edges, self.edges[1:]):
-            if set(e1.name.split('-')) == set(e2.name.split('-')):
-                raise ValueError(f"Found duplicate connections:\n \
-                                 {e1.name} and {e2.name}")
-        return self
-
-    @model_validator(mode='after')
     def check_start_end(self) -> 'GraphModel':
         """Require exactly one start hub and one end hub.
 
@@ -147,31 +94,25 @@ class GraphModel(BaseModel):
             raise ValueError("There must be exactly 1 end_hub")
         return self
 
-    @model_validator(mode='after')
-    def check_hub_names(self) -> 'GraphModel':
-        """Ensure every hub has a unique name.
-
-        Returns:
-            This validated graph.
-
-        Raises:
-            ValueError: If two hubs share a name.
-        """
-        if len([h.name for h in self.hubs
-                ]) != len(set(h.name for h in self.hubs)):
-            raise ValueError("Hubs must have unique names")
-        return self
+    # @model_validator(mode='after')
+    # def check_start_end_cap(self) -> 'GraphModel':
+    #     for h in self.hubs:
+    #         if h.kind in ('start_hub', 'end_hub'):
+    #             object.__setattr__(h, 'max_drones', self.nb_agents)
+    #     return self
 
     @model_validator(mode='after')
-    def check_start_end_cap(self) -> 'GraphModel':
-        """Allow every drone at the start and end hubs.
-
-        Returns:
-            This validated graph.
-        """
+    def check_no_isolated_hubs(self) -> 'GraphModel':
+        connected_names: set[str] = set()
+        for e in self.edges:
+            connected_names.add(e.hub_a.name)
+            connected_names.add(e.hub_b.name)
         for h in self.hubs:
-            if h.kind == 'start_hub' or h.kind == 'end_hub':
-                h.max_drones = self.nb_agents
+            if h.name not in connected_names:
+                raise ValueError(
+                    f"Hub '{h.name}' has no connections — "
+                    f"Input graph is disconnected."
+                )
         return self
 
 

@@ -31,10 +31,8 @@ class CBS(PathFinder):
                        dict[str, list[PathStep]],
                        dict[str, int]]:
         """Find paths for every agent under a shared constraint set.
-
         Args:
             constraints: Hub or connection reservations to apply to the search.
-
         Returns:
             A tuple containing each agent's path and its movement cost.
         """
@@ -43,6 +41,9 @@ class CBS(PathFinder):
         cost_per_agent: dict[str, int] = {}
         for agent in self.agent_ids:
             path, path_cost = self.single_agent_path(agent, constraints)
+            if not path:
+                print(f"WARNING: {agent} found no path under constraints: "
+                      f"{[c for c in constraints if c.agent_id == agent]}")
             paths[agent] = path
             cost_per_agent[agent] = path_cost
         return paths, cost_per_agent
@@ -51,12 +52,9 @@ class CBS(PathFinder):
                          joint_plan: dict[str, list[PathStep]]
                          ) -> Conflict | None:
         """Find the first hub-capacity or connection-overlap conflict.
-
-        Args:
-            joint_plan: Timestamped path for each agent.
-
-        Returns:
-            The first detected conflict, or ``None`` when the plan is valid.
+            Args:   joint_plan: Timestamped path for each agent.
+            Returns:    The first detected conflict, 
+                        or ``None`` when the plan is valid.
         """
         # {<hub.name, timestamp>: [agent_id]}
         occupied_hubs: dict[tuple[str, int], list[str]] = {}
@@ -66,10 +64,11 @@ class CBS(PathFinder):
                     (step.hub_to.name, step.t_arrive), []).append(agent_id)
 
         # now scan for conflict
+   
         for (hub_name, t), agents in occupied_hubs.items():
             occupied_hub = self._hub_lookup[hub_name]
-            cap = (occupied_hub.max_drones if
-                   occupied_hub.max_drones is not None else 1)
+            # print(f"{hub_name}: agents={agents}, max_drones={occupied_hub.max_drones}")
+            cap = occupied_hub.max_drones if occupied_hub.max_drones is not None else len(self.agent_ids)
             if len(agents) > cap:
                 # conflict identified !
                 return Conflict(agent_a=agents[0],
@@ -86,12 +85,39 @@ class CBS(PathFinder):
                         (agent_id, step.t_depart, step.t_arrive))
 
         for e_name, intervals in edge_intervals.items():
+            edge = self._edge_lookup[e_name]
+            cap = edge.max_capacity
+    
+            # for each interval, count how many others overlap with it
             for i, (agent_a, start_a, end_a) in enumerate(intervals):
-                for agent_b, start_b, end_b in intervals[i + 1:]:
-                    if start_a < end_b and start_b < end_a:
-                        # overlap detected
-                        return Conflict(agent_a, agent_b, e_name, start_b)
+                overlapping = [
+                    agent_id for agent_id, s, e in intervals
+                    if s < end_a and start_a < e  # overlap condition
+            ]
+                # overlapping includes agent_a itself, so threshold is cap + 1
+                if len(overlapping) > cap:
+                    # find the agent to constrain — the latest-departing one
+                    # that pushed the count over capacity
+                    sorted_overlapping = sorted(
+                        [(s, aid) for aid, s, e in intervals
+                            if s < end_a and start_a < e],
+                            key=lambda x: x[0]
+                    )
+                    _, agent_b = sorted_overlapping[cap]  # first agent over cap
+                    return Conflict(agent_a, agent_b, e_name,
+                                    sorted_overlapping[cap][0])
         return None
+
+
+
+
+        # for e_name, intervals in edge_intervals.items():
+        #     for i, (agent_a, start_a, end_a) in enumerate(intervals):
+        #         for agent_b, start_b, end_b in intervals[i + 1:]:
+        #             if start_a < end_b and start_b < end_a:
+        #                 # overlap detected
+        #                 return Conflict(agent_a, agent_b, e_name, start_b)
+        # return None
 
     def solve(self) -> CBSResult | None:
         """Search for a minimum-cost conflict-free plan.
@@ -109,8 +135,17 @@ class CBS(PathFinder):
         open_lst: list[tuple[int, int, CBSNode]] = [
             (sum(root_cost_pa.values()), next(counter), root)
             ]
-        for _ in range(100):
+        seen_constraints: set[frozenset] = set()
+        skipped = 0
+        for _ in range(5000):
             node_cost, _, node = heapq.heappop(open_lst)
+            constraint_key = frozenset(
+                (c.agent_id, c.position, c.t) for c in node.constraints
+            )
+            if constraint_key in seen_constraints:
+                skipped +=1
+                continue
+            seen_constraints.add(constraint_key)
             conflict = self._detect_conflict(node.all_paths)
             makespan: int = max(
                 steps[-1].t_arrive for steps in node.all_paths.values())
@@ -119,33 +154,39 @@ class CBS(PathFinder):
                                  node.cost_per_agent,
                                  makespan, node_cost)
 
-            is_edge: bool = '-' in conflict.position
-            if is_edge:
-                conflicting_agents = [
-                    agent for agent, step in node.all_paths.items()
-                    if any(f"{s.hub_from.name}-{s.hub_to.name}" ==
-                           conflict.position and
-                           s.t_depart == conflict.time for s in step)]
-                cap = 0
-            else:
-                occupied_hub: Hub = self._hub_lookup[conflict.position]
-                cap = occupied_hub.max_drones
-                conflicting_agents = [
-                    agent for agent, step in node.all_paths.items()
-                    if any(s.hub_to.name == conflict.position
-                           and s.t_arrive == conflict.time
-                           for s in step)
+            # is_edge: bool = '-' in conflict.position
+            # if is_edge:
+            #     edge = self._edge_lookup[conflict.position]
+            #     conflicting_agents = [
+            #         agent for agent, step in node.all_paths.items()
+            #         if any(f"{s.hub_from.name}-{s.hub_to.name}" ==
+            #                conflict.position and
+            #                s.t_depart == conflict.time for s in step)]
+            #     cap = edge.max_capacity
+            # else:
+            #     occupied_hub: Hub = self._hub_lookup[conflict.position]
+            #     cap = occupied_hub.max_drones if occupied_hub.max_drones is not None else len(self.agent_ids)
+            #     conflicting_agents = [
+            #         agent for agent, step in node.all_paths.items()
+            #         if any(s.hub_to.name == conflict.position
+            #                and s.t_arrive == conflict.time
+            #                for s in step)
+            #     ]
+            # excess_agents = conflicting_agents[cap:]
+            # always branch on the two agents named in the conflict
+            for agent in (conflict.agent_a, conflict.agent_b):
+                new_constraints = node.constraints + [
+                        Constraint(agent, conflict.position, conflict.time)
                 ]
-            excess_agents = conflicting_agents[cap:]
-            new_constraints = node.constraints + [
-                Constraint(agent, conflict.position, conflict.time)
-                for agent in excess_agents]
-            new_paths, new_cost_pa = self._all_paths(new_constraints)
-            child = CBSNode(constraints=new_constraints,
-                            all_paths=new_paths,
-                            cost_per_agent=new_cost_pa)
-            heapq.heappush(open_lst, (sum(new_cost_pa.values()),
-                                      next(counter), child))
+                new_paths, new_cost_pa = self._all_paths(new_constraints)
+                child = CBSNode(
+                        constraints=new_constraints,
+                        all_paths=new_paths,
+                        cost_per_agent=new_cost_pa
+                    )
+                heapq.heappush(open_lst, (sum(new_cost_pa.values()),
+                                next(counter), child))
         else:
             print("No solution found within iteration limit.")
+            print(f"Skipped {skipped} duplicate nodes")
             return None

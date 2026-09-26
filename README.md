@@ -48,7 +48,7 @@ The Pygame visualiser renders the map as a connected graph and updates it turn b
 
 | Feature | Detail |
 |---|---|
-| Hubs | Colored zones matching map metadata; each bearing name + capacity captions |
+| Hubs | Colored zones matching map metadata; each bearing name, zone and capacity captions |
 | Edges | Connection capacity shown at the midpoint |
 | Drone badges | Count badge on each occupied hub each turn |
 | In-transit drones | Badge shown at the edge midpoint during restricted-zone traversal |
@@ -63,6 +63,7 @@ Displaying drones at the connection midpoint during multi-turn movement makes th
 |---|---|
 | `Space` | Advance one turn |
 | `E` | Jump to the final state |
+| `Esc` | End visualisation and print summary |
 | Arrow keys (hold) | Pan the camera |
 | Mouse wheel | Zoom in / out (0.1× – 5×) |
 | `R` | Reset camera and zoom |
@@ -75,7 +76,7 @@ Displaying drones at the connection midpoint during multi-turn movement makes th
 ### Requirements
 
 - Python **3.13** or newer
-- [`uv`](https://github.com/astral-sh/uv) for dependency and virtual-environment management
+- [`uv`] for dependency and virtual-environment management
 - A graphical environment capable of opening a Pygame window
 
 ### Installation
@@ -97,7 +98,7 @@ The solver parses the map, computes conflict-free routes, and opens the visualis
 The `make` command loads a default map passed as a required argument. The program also accepts command-line flags directly:
 
 ```sh
-uv run fly_in.py [--verbose] [--cost-per-agent] <map>
+uv run -m fly_in [--verbose] [--cost-per-agent] <map>
 ```
 
 | Flag | Effect |
@@ -141,7 +142,7 @@ connection: middle-goal
 | `name` | Unique identifier — no hyphens |
 | `x`, `y` | Integer grid coordinates |
 | `zone` | `normal` (default), `priority`, `restricted`, `blocked` |
-| `color` | Any Pygame-recognised colour name |
+| `color` | Any Pygame-recognised colour name (defaults to white) |
 | `max_drones` | Maximum simultaneous occupants (default: 1) |
 
 ### Connection declaration

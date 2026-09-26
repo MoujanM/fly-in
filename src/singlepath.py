@@ -66,10 +66,8 @@ class PathFinder():
 
     def _move_cost(self, h: Hub) -> int | None:
         """Return the movement cost associated with a hub's zone.
-
         Args:
             h: Hub being entered.
-
         Returns:
             The number of turns required, or ``None`` for blocked zones.
         """
@@ -81,12 +79,10 @@ class PathFinder():
                     tuple[Hub, int] | None],
                     goal_state: tuple[Hub, int]) -> list[PathStep]:
         """Reconstruct timestamped path steps from A* predecessor links.
-
         Args:
             agent_id: Identifier of the agent whose path was searched.
             came_from: Predecessor mapping keyed by hub name and time.
             goal_state: Goal hub and arrival time.
-
         Returns:
             Ordered path steps from the start hub to the goal.
         """
@@ -110,11 +106,9 @@ class PathFinder():
     def single_agent_path(self, agent_id: str, constraints: list[Constraint]
                           ) -> tuple[list[PathStep], int]:
         """Find a minimum-cost path with time and position constraints.
-
         Args:
             agent_id: Identifier of the agent to route.
             constraints: Hub or connection reservations to avoid.
-
         Returns:
             A tuple containing timestamped path steps and total path cost.
         """
@@ -167,6 +161,10 @@ class PathFinder():
                     heapq.heappush(hq, (priority, next(counter),
                                         (h, t + turns)))
                     came_from[new_state_key] = current_state
+        if 'goal_state' not in locals():
+            print(f"A* failed for {agent_id}. "
+                  f"Constraints: {[c for c in constraints if c.agent_id == agent_id]}")
+            return [], 0
         path_steps = self._build_path(agent_id, came_from, goal_state)
 
         return (path_steps, cost_sum[(goal_state[0].name, goal_state[1])])
@@ -174,7 +172,7 @@ class PathFinder():
 
 if __name__ == "__main__":
     from src.parser import GraphParser
-    filename = "./maps/easy/02_simple_fork.txt"
+    filename = "maps/easy/01_linear_path.txt"
     parser = GraphParser(filename)
     solver = PathFinder(parser._graph)
     # print(solver.agent_ids)

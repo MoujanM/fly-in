@@ -73,20 +73,20 @@ class SimController:
         """
         state: dict[str, list[str]] = {}
         for agent, pos in self._agent_positions.items():
-            if agent not in self.delivered:
-                state.setdefault(pos, []).append(agent)
+            # if agent not in self.delivered:
+            state.setdefault(pos, []).append(agent)
         return state
 
-    def final_state(self) -> dict[str, list[str]]:
-        """Return all agents grouped by their final recorded position.
+    # def final_state(self) -> dict[str, list[str]]:
+    #     """Return all agents grouped by their final recorded position.
 
-        Returns:
-            A mapping from position name to agent identifiers.
-        """
-        state: dict[str, list[str]] = {}
-        for agent, position in self._agent_positions.items():
-            state.setdefault(position, []).append(agent)
-        return state
+    #     Returns:
+    #         A mapping from position name to agent identifiers.
+    #     """
+    #     state: dict[str, list[str]] = {}
+    #     for agent, position in self._agent_positions.items():
+    #         state.setdefault(position, []).append(agent)
+    #     return state
 
     def _get_sim_desc(self) -> list[str]:
         """Create printable movement descriptions for each active turn.
@@ -122,11 +122,7 @@ class SimController:
         return simualation
 
     def get_turn_steps(self) -> list[PathStep]:
-        """Return the path steps scheduled for the current turn.
-
-        Returns:
-            Path steps active at ``current_turn``.
-        """
+        """Return the path steps scheduled for the current turn."""
         return self.turn_map[self.current_turn]
 
     def advance_turn(self) -> None:
@@ -134,17 +130,14 @@ class SimController:
 
         Delivered agents are removed from the active view, and agents still
         travelling are represented by their connection name.
-
-        Returns:
-            None.
         """
-        print(self.output[self.current_turn])
         remaining_turns: list[int] = [
             t for t in self.turn_map if t > self.current_turn]
         if not remaining_turns:
             for agent in self.agents:
                 self._agent_positions[agent] = "goal"
-            self.jump_to_end()
+            self.current_turn = self.max_turn
+            # self.delivered = set(self.agents)
             return
         next_turn = min(remaining_turns)
         steps = self.get_turn_steps()
@@ -166,16 +159,6 @@ class SimController:
         self.current_turn = next_turn
         return None
 
-    def jump_to_end(self) -> None:
-        """Move the simulation directly to its completed state.
-
-        Returns:
-            None.
-        """
-        self.current_turn = self.max_turn
-        self.delivered = set(self.agents)
-        return None
-
     def turn_header(self) -> str:
         """Format the current turn and agent count for the visualizer.
 
@@ -185,5 +168,3 @@ class SimController:
         return (f"Turn {self.current_turn} / {self.max_turn}"
                 f" (nb_agents: {len(self.agents)})")
 
-    # def sim_complete(self) -> bool:
-    #     return self.delivered == set(self.agents)
