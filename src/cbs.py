@@ -68,7 +68,10 @@ class CBS(PathFinder):
         for (hub_name, t), agents in occupied_hubs.items():
             occupied_hub = self._hub_lookup[hub_name]
             # print(f"{hub_name}: agents={agents}, max_drones={occupied_hub.max_drones}")
-            cap = occupied_hub.max_drones if occupied_hub.max_drones is not None else len(self.agent_ids)
+            if occupied_hub.kind == 'start_hub' or occupied_hub.kind == 'end_hub':
+                cap = len(self.agent_ids)
+            else:
+                cap = occupied_hub.max_drones
             if len(agents) > cap:
                 # conflict identified !
                 return Conflict(agent_a=agents[0],
@@ -83,6 +86,8 @@ class CBS(PathFinder):
                     edge_name = f"{step.hub_from.name}-{step.hub_to.name}"
                     edge_intervals.setdefault(edge_name, []).append(
                         (agent_id, step.t_depart, step.t_arrive))
+    
+        # print(f"Edge intervals: {edge_intervals}")
 
         for e_name, intervals in edge_intervals.items():
             edge = self._edge_lookup[e_name]
@@ -93,31 +98,20 @@ class CBS(PathFinder):
                 overlapping = [
                     agent_id for agent_id, s, e in intervals
                     if s < end_a and start_a < e  # overlap condition
-            ]
+                ]
                 # overlapping includes agent_a itself, so threshold is cap + 1
                 if len(overlapping) > cap:
                     # find the agent to constrain — the latest-departing one
                     # that pushed the count over capacity
-                    sorted_overlapping = sorted(
-                        [(s, aid) for aid, s, e in intervals
-                            if s < end_a and start_a < e],
-                            key=lambda x: x[0]
-                    )
-                    _, agent_b = sorted_overlapping[cap]  # first agent over cap
+                    # sorted_overlapping = sorted(
+                    #     [(s, aid) for aid, s, e in intervals
+                    #         if s < end_a and start_a < e],
+                    #         key=lambda x: x[0]
+                    # )
+                    agent_b = overlapping[cap]  # first agent over cap
                     return Conflict(agent_a, agent_b, e_name,
-                                    sorted_overlapping[cap][0])
+                                    start_a)
         return None
-
-
-
-
-        # for e_name, intervals in edge_intervals.items():
-        #     for i, (agent_a, start_a, end_a) in enumerate(intervals):
-        #         for agent_b, start_b, end_b in intervals[i + 1:]:
-        #             if start_a < end_b and start_b < end_a:
-        #                 # overlap detected
-        #                 return Conflict(agent_a, agent_b, e_name, start_b)
-        # return None
 
     def solve(self) -> CBSResult | None:
         """Search for a minimum-cost conflict-free plan.
@@ -135,18 +129,21 @@ class CBS(PathFinder):
         open_lst: list[tuple[int, int, CBSNode]] = [
             (sum(root_cost_pa.values()), next(counter), root)
             ]
-        seen_constraints: set[frozenset] = set()
-        skipped = 0
-        for _ in range(5000):
+        # seen_constraints: set[frozenset] = set()
+        # skipped = 0
+        for _ in range(1500):
             node_cost, _, node = heapq.heappop(open_lst)
-            constraint_key = frozenset(
-                (c.agent_id, c.position, c.t) for c in node.constraints
-            )
-            if constraint_key in seen_constraints:
-                skipped +=1
-                continue
-            seen_constraints.add(constraint_key)
+            # constraint_key = frozenset(
+            #     (c.agent_id, c.position, c.t) for c in node.constraints
+            # )
+            # if constraint_key in seen_constraints:
+            #     skipped +=1
+            #     continue
+            # seen_constraints.add(constraint_key)
             conflict = self._detect_conflict(node.all_paths)
+            print(f"Iter{_}: constraints={len(node.constraints)}, "
+                  f"conflict={conflict.position if conflict else None}@t={conflict.time if conflict else None}, "
+                  f"open_lst size={len(open_lst)}")
             makespan: int = max(
                 steps[-1].t_arrive for steps in node.all_paths.values())
             if not conflict:
@@ -154,27 +151,28 @@ class CBS(PathFinder):
                                  node.cost_per_agent,
                                  makespan, node_cost)
 
-            # is_edge: bool = '-' in conflict.position
-            # if is_edge:
-            #     edge = self._edge_lookup[conflict.position]
-            #     conflicting_agents = [
-            #         agent for agent, step in node.all_paths.items()
-            #         if any(f"{s.hub_from.name}-{s.hub_to.name}" ==
-            #                conflict.position and
-            #                s.t_depart == conflict.time for s in step)]
-            #     cap = edge.max_capacity
-            # else:
-            #     occupied_hub: Hub = self._hub_lookup[conflict.position]
-            #     cap = occupied_hub.max_drones if occupied_hub.max_drones is not None else len(self.agent_ids)
-            #     conflicting_agents = [
-            #         agent for agent, step in node.all_paths.items()
-            #         if any(s.hub_to.name == conflict.position
-            #                and s.t_arrive == conflict.time
-            #                for s in step)
-            #     ]
-            # excess_agents = conflicting_agents[cap:]
+            if '-' not in conflict.position:
+                # hub conflict
+                occupied_hub: Hub = self._hub_lookup[conflict.position]
+                cap = occupied_hub.max_drones if occupied_hub.max_drones is not None else len(self.agent_ids)
+                conflicting_agents = [
+                    agent for agent, step in node.all_paths.items()
+                    if any(s.hub_to.name == conflict.position
+                           and s.t_arrive == conflict.time
+                           for s in step)]
+            else:
+                # edge conflict
+                edge = self._edge_lookup[conflict.position]
+                conflicting_agents = [
+                    agent for agent, step in node.all_paths.items()
+                    if any(f"{s.hub_from.name}-{s.hub_to.name}" ==
+                           conflict.position and
+                           s.t_depart == conflict.time for s in step)]
+                cap = edge.max_capacity
+
+            excess_agents = conflicting_agents[cap:]
             # always branch on the two agents named in the conflict
-            for agent in (conflict.agent_a, conflict.agent_b):
+            for agent in excess_agents:
                 new_constraints = node.constraints + [
                         Constraint(agent, conflict.position, conflict.time)
                 ]
@@ -188,5 +186,5 @@ class CBS(PathFinder):
                                 next(counter), child))
         else:
             print("No solution found within iteration limit.")
-            print(f"Skipped {skipped} duplicate nodes")
+            # print(f"Skipped {skipped} duplicate nodes")
             return None

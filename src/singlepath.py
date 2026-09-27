@@ -59,9 +59,9 @@ class PathFinder():
         distance = abs(v1.x - v2.x) + abs(v1.y - v2.y)
         bonus: float = 0
         if v1.zone == 'priority':
-            bonus += 0.1
-        if v1.zone == 'restricted':
             bonus -= 0.1
+        if v1.zone == 'restricted':
+            bonus += 0.1
         return float(distance) + bonus
 
     def _move_cost(self, h: Hub) -> int | None:
@@ -98,6 +98,10 @@ class PathFinder():
             turns_taken = curr_s[1] - prev_s[1]
             is_moving = curr_s[0].name != prev_s[0].name
             in_transit = is_moving and turns_taken == 2
+            # if in_transit:
+            #     print(f"in_transit: {agent_id} "
+            #           f"{prev_s[0].name}->{curr_s[0].name} "
+            #           f"t={prev_s[1]}->{curr_s[1]}")
             step: PathStep = PathStep(agent_id, prev_s[0], curr_s[0],
                                       prev_s[1], curr_s[1], in_transit)
             path_steps.append(step)
