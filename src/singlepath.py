@@ -47,136 +47,132 @@ class PathFinder():
         return adj_map
 
     def _heuristic(self, v1: Hub, v2: Hub) -> float:
-        """Estimate the remaining movement cost between two hubs.
-
-        Args:
-            v1: Current hub.
-            v2: Goal hub.
-
-        Returns:
-            Manhattan distance with a small zone-based tie-breaker.
         """
-        distance = abs(v1.x - v2.x) + abs(v1.y - v2.y)
-        bonus: float = 0
-        if v1.zone == 'priority':
-            bonus -= 0.1
-        if v1.zone == 'restricted':
-            bonus += 0.1
-        return float(distance) + bonus
+        Admissible and consistent Manhattan distance heuristic.
+        Tiny tie-breaker is strictly smaller than minimum edge cost.
+        """
+        dx = abs(v1.x - v2.x)
+        dy = abs(v1.y - v2.y)
+        distance = dx + dy
+        tie_breaker = 0.0001 * distance
+        return float(distance + tie_breaker)
 
     def _move_cost(self, h: Hub) -> int | None:
-        """Return the movement cost associated with a hub's zone.
-        Args:
-            h: Hub being entered.
-        Returns:
-            The number of turns required, or ``None`` for blocked zones.
-        """
-        z_cost_lookup: dict[str, int] = {
-            z.value[0]: z.value[1] for z in ZoneCost}
-        return z_cost_lookup[h.zone]
+        z_cost_lookup: dict[str, int] = {z.value[0]: z.value[1] for z in ZoneCost}
+        return z_cost_lookup.get(h.zone)
 
-    def _build_path(self, agent_id: str, came_from: dict[tuple[str, int],
-                    tuple[Hub, int] | None],
+    def _build_path(self, agent_id: str,
+                    came_from: dict[tuple[str, int], tuple[Hub, int] | None],
                     goal_state: tuple[Hub, int]) -> list[PathStep]:
-        """Reconstruct timestamped path steps from A* predecessor links.
-        Args:
-            agent_id: Identifier of the agent whose path was searched.
-            came_from: Predecessor mapping keyed by hub name and time.
-            goal_state: Goal hub and arrival time.
-        Returns:
-            Ordered path steps from the start hub to the goal.
-        """
-
         path: list[tuple[Hub, int]] = []
         crumbs: tuple[Hub, int] | None = goal_state
         while crumbs is not None:
             path.append(crumbs)
             crumbs = came_from.get((crumbs[0].name, crumbs[1]))
         path.reverse()
+
         path_steps: list[PathStep] = []
         for prev_s, curr_s in zip(path, path[1:]):
             turns_taken = curr_s[1] - prev_s[1]
             is_moving = curr_s[0].name != prev_s[0].name
             in_transit = is_moving and turns_taken == 2
-            # if in_transit:
-            #     print(f"in_transit: {agent_id} "
-            #           f"{prev_s[0].name}->{curr_s[0].name} "
-            #           f"t={prev_s[1]}->{curr_s[1]}")
-            step: PathStep = PathStep(agent_id, prev_s[0], curr_s[0],
-                                      prev_s[1], curr_s[1], in_transit)
+            step = PathStep(agent_id, prev_s[0], curr_s[0],
+                            prev_s[1], curr_s[1], in_transit)
             path_steps.append(step)
         return path_steps
 
-    def single_agent_path(self, agent_id: str, constraints: list[Constraint]
-                          ) -> tuple[list[PathStep], int]:
-        """Find a minimum-cost path with time and position constraints.
-        Args:
-            agent_id: Identifier of the agent to route.
-            constraints: Hub or connection reservations to avoid.
-        Returns:
-            A tuple containing timestamped path steps and total path cost.
+    def single_agent_path(self, agent_id: str,
+                          constraints: list[Constraint]
+                          ) -> tuple[list[PathStep], float]:
+        """
+        Time-expanded A* with upper bound time horizon.
+        Returns empty path with infinite cost if goal unreachable
+        under the given constraints.
         """
         forbidden: set[tuple[str, int]] = {
-            (c.position, c.t) for c in constraints if c.agent_id == agent_id}
-        # think of v as state of <hub, timestamp>
-        v_start: tuple[Hub, int] = (next(
-            h for h in self.hubs if h.kind == 'start_hub'), 0)
-        v_goal: Hub = next(h for h in self.hubs if h.kind == 'end_hub')
+            (c.position, c.t) for c in constraints if c.agent_id == agent_id
+        }
 
+        v_start_hub = next(h for h in self.hubs if h.kind == 'start_hub')
+        v_goal_hub = next(h for h in self.hubs if h.kind == 'end_hub')
+        v_start: tuple[Hub, int] = (v_start_hub, 0)
+
+        # time-horizon bound (t_max) prevents looping when agent blocked
+        max_constraint_t = max(
+            (c.t for c in constraints if c.agent_id == agent_id),
+            default=0
+        )
+        t_max = (len(self.hubs) * 2) + max_constraint_t + 30
+        print(f"A*'s t_max: {t_max}")
         came_from: dict[tuple[str, int], tuple[Hub, int] | None] = {
-            (v_start[0].name, v_start[1]): None}
-        cost_sum: dict[tuple[str, int], int] = {
-            (v_start[0].name, v_start[1]): 0}
+            (v_start[0].name, v_start[1]): None
+        }
+        cost_sum: dict[tuple[str, int], float] = {
+            (v_start[0].name, v_start[1]): 0.0
+        }
 
-        counter = itertools.count()     # tie-breaker
+        counter = itertools.count()
         hq: list[tuple[float, int, tuple[Hub, int]]] = [
-            (0.0, next(counter), v_start)]  # (priority, tiebreaker, state)
+            (self._heuristic(v_start[0], v_goal_hub), next(counter), v_start)
+        ]
+        goal_state: tuple[Hub, int] | None = None
 
         while hq:
             priority, _, current_state = heapq.heappop(hq)
-            if current_state[0].name == v_goal.name:
+            curr_hub, t = current_state
+
+            if curr_hub.name == v_goal_hub.name:
                 goal_state = current_state
                 break
-            curr_hub, t = current_state
+
+            if t >= t_max:
+                continue
+
             neighbours = self.adj_map.get(curr_hub.name, [])
             move_opts: list[Hub] = neighbours + [curr_hub]
+
             for h in move_opts:
-                if h == curr_hub:
-                    # wait action costs 1
-                    turns: int | None = 1
-                else:
-                    turns = self._move_cost(h)
+                turns = 1 if h == curr_hub else self._move_cost(h)
                 if turns is None:
                     continue
-                new_state_key = (h.name, t + turns)
+
+                new_t = t + turns
+                if new_t > t_max:
+                    continue
+
+                new_state_key = (h.name, new_t)
                 if new_state_key in forbidden:
                     continue
-                if h != curr_hub:
-                    edge_name = f"{curr_hub.name}-{h.name}"
-                    if (edge_name, t) in forbidden:
-                        continue
-                    # if turns == 2 and (edge_name, t) in forbidden:
-                    #     continue
-                new_cost = cost_sum[(curr_hub.name, t)] + turns
-                if (new_state_key not in cost_sum or
-                        new_cost < cost_sum[new_state_key]):
-                    cost_sum[(new_state_key)] = new_cost
-                    priority = new_cost + self._heuristic(h, v_goal)
-                    heapq.heappush(hq, (priority, next(counter),
-                                        (h, t + turns)))
-                    came_from[new_state_key] = current_state
-        if 'goal_state' not in locals():
-            print(f"A* failed for {agent_id}. "
-                  f"Constraints: {[c for c in constraints if c.agent_id == agent_id]}")
-            return [], 0
-        path_steps = self._build_path(agent_id, came_from, goal_state)
 
+                if h != curr_hub and turns == 2:
+                    edge_name = Edge.canonical_name(h.name, curr_hub.name)
+                    if any((edge_name, check_t) in forbidden
+                           for check_t in range(t, new_t)):
+                        continue
+                # prefer priority zones, distinct from heuristic
+                actual_turns = turns
+                if h.zone == 'priority' and h != curr_hub:
+                    priority_discount = 0.001  # smaller than tie-breaker, larger than rounding error
+                    new_cost = cost_sum[(curr_hub.name, t)] + actual_turns - priority_discount
+                else:
+                    new_cost = cost_sum[(curr_hub.name, t)] + actual_turns
+
+                if new_state_key not in cost_sum or new_cost < cost_sum[new_state_key]:
+                    cost_sum[new_state_key] = new_cost
+                    f = new_cost + self._heuristic(h, v_goal_hub)
+                    came_from[new_state_key] = current_state
+                    heapq.heappush(hq, (f, next(counter), (h, new_t)))
+
+        if goal_state is None:
+            return ([], float('inf'))
+
+        path_steps = self._build_path(agent_id, came_from, goal_state)
         return (path_steps, cost_sum[(goal_state[0].name, goal_state[1])])
 
 
 if __name__ == "__main__":
     from src.parser import GraphParser
-    filename = "maps/easy/01_linear_path.txt"
+    filename = "maps/medium/02_circular_loop.txt"
     parser = GraphParser(filename)
     solver = PathFinder(parser._graph)
     # print(solver.agent_ids)

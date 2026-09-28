@@ -64,6 +64,18 @@ class Edge(BaseModel):
     hub_b: Hub
     max_capacity: int = Field(default=1, ge=1)
 
+    @staticmethod
+    def canonical_name(hub1_name: str, hub2_name: str) -> str:
+        """Return a deterministic edge identifier regardless of traversal direction."""
+        u, v = sorted([hub1_name, hub2_name])
+        return f"{u}-{v}"
+        
+    @model_validator(mode='after')
+    def set_canonical_name(self) -> 'Edge':
+        """Ensure the Edge name attribute is always canonicalized upon creation."""
+        self.name = self.canonical_name(self.hub_a.name, self.hub_b.name)
+        return self
+
 
 class GraphModel(BaseModel):
     """Validated graph and drone count used by the routing algorithms.
@@ -193,7 +205,7 @@ class CBSNode:
 
     constraints: list[Constraint]
     all_paths: dict[str, list[PathStep]]
-    cost_per_agent: dict[str, int]
+    cost_per_agent: dict[str, float]
 
 
 @dataclass
@@ -208,6 +220,6 @@ class CBSResult:
     """
 
     joint_plan: dict[str, list[PathStep]]
-    cost_per_agent: dict[str, int]
+    cost_per_agent: dict[str, float]
     makespan: int
     total_cost: int
