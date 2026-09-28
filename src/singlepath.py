@@ -103,7 +103,7 @@ class PathFinder():
             default=0
         )
         t_max = (len(self.hubs) * 2) + max_constraint_t + 30
-        print(f"A*'s t_max: {t_max}")
+        # print(f"A*'s t_max: {t_max}")
         came_from: dict[tuple[str, int], tuple[Hub, int] | None] = {
             (v_start[0].name, v_start[1]): None
         }
