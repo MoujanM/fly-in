@@ -110,7 +110,11 @@ class FlyIn:
                     if (event.key == pygame.K_SPACE):
                         if control.current_turn < control.max_turn:
                             control.advance_turn()
-                            print(control.output[control.current_turn - 1])
+                            output = control.output.get(
+                                     control.current_turn - 1)
+                            if output:
+                                for o in output:
+                                    print(o)
                         elif control.current_turn == control.max_turn:
                             continue
                     if event.key == pygame.K_ESCAPE:
@@ -141,16 +145,16 @@ class FlyIn:
 
     def print_summary(self, control: SimController) -> None:
         """Print makespan and cost information for a completed plan.
-
         Args:
             control: Simulation state controller.
-
         Returns:
             None.
         """
         _ = call('clear' if os.name == 'posix' else 'cls')
-        for turn in control.output:
-            print(turn)
+        for turn, desc in control.output.items():
+            for d in desc:
+                if d:
+                    print(d)
 
         if self._args.verbose:
             print(f"Makespan: {control.result.makespan}")

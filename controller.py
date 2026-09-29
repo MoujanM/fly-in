@@ -22,7 +22,7 @@ class SimController:
         self.result: CBSResult = result
         self.agents: list[str] = list(result.joint_plan.keys())
         self.turn_map: dict[int, list[PathStep]] = self._get_turn_map()
-        self.output: list[str] = self._get_sim_desc()
+        self.output: dict[int, list[str]] = self._get_sim_desc()
 
         self.current_turn: int = 0
         self.max_turn: int = max(self.turn_map.keys()) + 1
@@ -88,7 +88,7 @@ class SimController:
     #         state.setdefault(position, []).append(agent)
     #     return state
 
-    def _get_sim_desc(self) -> list[str]:
+    def _get_sim_desc(self) -> dict[int, list[str]]:
         """Create printable movement descriptions for each active turn.
 
         Returns:
@@ -100,7 +100,7 @@ class SimController:
                 turn_map.setdefault(step.t_depart, []).append(step)
 
         delivered: set[str] = set()
-        simualation: list[str] = []
+        simulation: dict[int, list[str]] = {}
         for turn in sorted(turn_map.keys()):
             moves = []
             for step in turn_map[turn]:
@@ -115,11 +115,10 @@ class SimController:
                     moves.append(f"{step.agent_id}-{step.hub_to.name}")
                 if step.hub_to.kind == "end_hub" and not step.in_transit:
                     delivered.add(step.agent_id)
-            if moves:
-                simualation.append(" ".join(moves))
+            simulation.setdefault(turn, []).append(" ".join(moves))
             if delivered == set(self.agents):
                 break
-        return simualation
+        return simulation
 
     def get_turn_steps(self) -> list[PathStep]:
         """Return the path steps scheduled for the current turn."""
@@ -167,4 +166,3 @@ class SimController:
         """
         return (f"Turn {self.current_turn} / {self.max_turn}"
                 f" (nb_agents: {len(self.agents)})")
-
