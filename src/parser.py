@@ -12,9 +12,8 @@ EDGE_PATTERN: re.Pattern = re.compile(
     r'(?:\s+\[(?P<meta>[^\[\]]*)\])?$')
 
 META_KV_PATTERN: re.Pattern = re.compile(r'(\w+)=(\w+|-?\d+)')
-
-VALID_HUB_META    = {'zone', 'color', 'max_drones'}
-VALID_EDGE_META   = {'max_link_capacity'}
+VALID_HUB_META = {'zone', 'color', 'max_drones'}
+VALID_EDGE_META = {'max_link_capacity'}
 
 
 class GraphParser():
@@ -39,7 +38,7 @@ class GraphParser():
         self._graph: GraphModel = self.get_graph()
 
     def parse_meta(self, metadata: str, lineno: int,
-               known_keys: set[str] | None = None) -> dict[str, str]:
+                   known_keys: set[str] | None = None) -> dict[str, str]:
         pairs = META_KV_PATTERN.findall(metadata)
         if not pairs:
             raise ParsingError(
@@ -67,8 +66,9 @@ class GraphParser():
 
         metadata: dict[str, str] = {}
         if m.group('meta'):
-            metadata = self.parse_meta(m.group('meta'), lineno,
-                        known_keys={'zone', 'color', 'max_drones'})
+            metadata = self.parse_meta(
+                m.group('meta'), lineno,
+                known_keys={'zone', 'color', 'max_drones'})
 
         kind = m.group('kind')
         name = m.group('name')
@@ -86,7 +86,7 @@ class GraphParser():
             )
 
         # validate capacity — only meaningful for regular hubs
-        max_drones: int | None = None
+        max_drones: int = 0
         if kind == 'hub':
             raw_cap = metadata.get('max_drones', 1)
             try:
@@ -109,24 +109,26 @@ class GraphParser():
                 name=name,
                 x=int(m.group('x')),
                 y=int(m.group('y')),
-                zone=cast(Literal['normal', 'restricted', 'priority', 'blocked'],
-                      zone_raw),
+                zone=cast(Literal[
+                    'normal', 'restricted', 'priority', 'blocked'], zone_raw),
                 color=color,
                 max_drones=max_drones,
             )
         except ValidationError as e:
             field = e.errors()[0]['loc']
             msg = e.errors()[0]['msg']
-            raise ParsingError(f"Line {lineno}: hub '{name}' failed validation "
-                            f"on field {field}: {msg}") from e
+            raise ParsingError(f"Line {lineno}: hub '{name}' "
+                               f"failed validation on field {field}: "
+                               f"{msg}") from e
 
     def parse_return_edge(self, edge_str: str, lineno: int) -> Edge:
         """Parse one connection declaration into a validated edge."""
         m = EDGE_PATTERN.match(edge_str)
         if not m:
             raise ParsingError(
-                f"Line {lineno}: malformed connection declaration: '{edge_str}'. "
-                f"Expected: connection: <name_a>-<name_b> [metadata]"
+                f"Line {lineno}: malformed connection declaration: "
+                f"'{edge_str}'\n"
+                f"Expected format: connection: <name_a>-<name_b> [metadata]"
             )
 
         hub_lookup: dict[str, Hub] = {h.name: h for h in self._hubs}
@@ -134,19 +136,22 @@ class GraphParser():
 
         if a_name not in hub_lookup:
             raise ParsingError(
-                f"Line {lineno}: connection references undefined hub '{a_name}'."
+                f"Line {lineno}: connection references undefined hub "
+                f"'{a_name}'."
             )
         if b_name not in hub_lookup:
             raise ParsingError(
-                f"Line {lineno}: connection references undefined hub '{b_name}'."
+                f"Line {lineno}: connection references undefined hub "
+                f"'{b_name}'."
             )
 
         hub_a, hub_b = hub_lookup[a_name], hub_lookup[b_name]
 
         metadata: dict[str, str] = {}
         if m.group('meta'):
-            metadata = self.parse_meta(m.group('meta'), lineno,
-                        known_keys={'max_link_capacity'})
+            metadata = self.parse_meta(
+                m.group('meta'), lineno,
+                known_keys={'max_link_capacity'})
 
         raw_cap = metadata.get('max_link_capacity', '1')
         try:
@@ -155,8 +160,8 @@ class GraphParser():
                 raise ValueError
         except ValueError:
             raise ParsingError(
-                f"Line {lineno}: max_link_capacity must be a positive integer, "
-                f"got '{raw_cap}'."
+                f"Line {lineno}: max_link_capacity must be a positive integer,"
+                f" got '{raw_cap}'."
             )
 
         try:
@@ -198,7 +203,8 @@ class GraphParser():
                 f"'nb_drones: <positive_integer>', got: '{first}'"
             )
 
-        valid_prefixes = ('nb_drones:', 'start_hub:', 'end_hub:', 'hub:', 'connection:')
+        valid_prefixes = ('nb_drones:', 'start_hub:',
+                          'end_hub:', 'hub:', 'connection:')
         for lineno, line in lines[1:]:
             if not any(line.startswith(p) for p in valid_prefixes):
                 raise ParsingError(
@@ -247,7 +253,8 @@ class GraphParser():
                 seen_edges.add(pair)
                 self._edges.append(edge)
             else:
-                raise ParsingError(f"Line {lineno}: Unknown line start, could not parse.")
+                raise ParsingError(f"Line {lineno}: Unknown line start, "
+                                   f"could not parse.")
         return nb_agents, self._hubs, self._edges
 
     def get_graph(self) -> GraphModel:
@@ -261,11 +268,11 @@ class GraphParser():
         try:
             return GraphModel(nb_agents=nb_agents, hubs=hubs, edges=edges)
         except ValidationError as e:
-            # field = e.errors()[0]['loc']
-            msg   = e.errors()[0]['msg']
+            msg = e.errors()[0]['msg']
             raise ParsingError(
                 f"Graph validation failed on {msg}"
             ) from e
+
 
 if __name__ == "__main__":
     filename = "maps/easy/01_linear_path.txt"
@@ -274,4 +281,3 @@ if __name__ == "__main__":
         print(parser._graph)
     except Exception as e:
         print(e)
-    

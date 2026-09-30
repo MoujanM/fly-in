@@ -97,6 +97,7 @@ class CBS(PathFinder):
             cap = (len(self.agent_ids)
                    if occupied_hub.kind in ('start_hub', 'end_hub')
                    else occupied_hub.max_drones)
+            assert agents is not None
             if len(agents) > cap:
                 # Conflict: too many agents at this hub at this time
                 return Conflict(agents[0], agents[1], hub_name, t)
