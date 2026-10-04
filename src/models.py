@@ -92,26 +92,19 @@ class GraphModel(BaseModel):
 
     @model_validator(mode='after')
     def check_start_end(self) -> 'GraphModel':
-        """Require exactly one start hub and one end hub.
-
-        Returns:
-            This validated graph.
-
-        Raises:
-            ValueError: If the graph does not have one start and one end hub.
-        """
+        """Check there are exactly one start hub and one end hub."""
         if len([h for h in self.hubs if h.kind == 'start_hub']) != 1:
             raise ValueError("There must be exactly 1 start_hub")
         if len([h for h in self.hubs if h.kind == 'end_hub']) != 1:
             raise ValueError("There must be exactly 1 end_hub")
         return self
 
-    # @model_validator(mode='after')
-    # def check_start_end_cap(self) -> 'GraphModel':
-    #     for h in self.hubs:
-    #         if h.kind in ('start_hub', 'end_hub'):
-    #             object.__setattr__(h, 'max_drones', self.nb_agents)
-    #     return self
+    @model_validator(mode='after')
+    def check_start_end_cap(self) -> 'GraphModel':
+        for h in self.hubs:
+            if h.kind in ('start_hub', 'end_hub'):
+                object.__setattr__(h, 'max_drones', self.nb_agents)
+        return self
 
     @model_validator(mode='after')
     def check_no_isolated_hubs(self) -> 'GraphModel':
@@ -125,6 +118,45 @@ class GraphModel(BaseModel):
                     f"Hub '{h.name}' has no connections — "
                     f"Input graph is disconnected."
                 )
+        return self
+
+    @model_validator(mode='after')
+    def check_graph_connectivity(self) -> 'GraphModel':
+        """Ensure the entire graph is connected using Union-Find.
+        Raises:
+            ValueError: If the graph contains unreachable components.
+        """
+        if len(self.hubs) <= 1:
+            return self
+    
+        # Union-Find data structure
+        parent: dict[str, str] = {h.name: h.name for h in self.hubs}
+    
+        def find(hub_name: str) -> str:
+            """Find the root of a hub's component."""
+            if parent[hub_name] != hub_name:
+                parent[hub_name] = find(parent[hub_name])  # path compression
+            return parent[hub_name]
+    
+        def union(hub1: str, hub2: str) -> None:
+            """Unite two hubs into the same component."""
+            root1, root2 = find(hub1), find(hub2)
+            if root1 != root2:
+                parent[root1] = root2
+            return None
+    
+        # Union all connected hubs via edges
+        for edge in self.edges:
+            union(edge.hub_a.name, edge.hub_b.name)
+    
+        # Check if all hubs belong to the same component
+        start = next(h.name for h in self.hubs if h.kind == "start_hub")
+        end = next(h.name for h in self.hubs if h.kind == "end_hub")
+        if find(start) != find(end):
+            raise ValueError(
+                f"end_hub {end} not reachable from"
+                f" start_hub {start} - Graph is disconnected"
+            )
         return self
 
 
