@@ -49,7 +49,7 @@ The Pygame visualiser renders the map as a connected graph and updates it turn b
 | Feature | Detail |
 |---|---|
 | Hubs | Colored zones matching map metadata; each bearing name, zone and capacity captions |
-| Edges | Connection capacity shown at the midpoint |
+| Edges | Connection capacity shown at the midpoint if value greater than 1 (default) |
 | Drone badges | Count badge on each occupied hub each turn |
 | In-transit drones | Badge shown at the edge midpoint during restricted-zone traversal |
 | Turn counter | Current turn, total turns, and active drone count displayed at the bottom of screen |
@@ -62,7 +62,6 @@ Displaying drones at the connection midpoint during multi-turn movement makes th
 | Key / Input | Action |
 |---|---|
 | `Space` | Advance one turn |
-| `E` | Jump to the final state |
 | `Esc` | End visualisation and print summary |
 | Arrow keys (hold) | Pan the camera |
 | Mouse wheel | Zoom in / out (0.1× – 5×) |
@@ -116,7 +115,7 @@ uv run fly_in.py --verbose --cost-per-agent maps/medium/02_circular_loop.txt
 
 ## Map Format
 
-Map files are plain text. Blank lines and lines beginning with `#` are ignored. The first meaningful line must declare the drone count.
+Map files are plain text. Strict parsing rules are enforced, if a line contains malformed or unexpected input, `ParsingError` is raised, displaying the problematic line number. Blank lines and lines beginning with `#` are ignored, the first meaningful line must declare the drone count, subsequent lines must follow expected format for hub and connection details.
 
 ```text
 # Example map
@@ -130,7 +129,7 @@ connection: start-middle
 connection: middle-goal
 ```
 
-### Hub declaration
+### Hub and Edge declaration
 
 ```
 <kind>: <name> <x> <y> [metadata]
@@ -151,7 +150,9 @@ connection: middle-goal
 connection: <hub_a>-<hub_b> [max_link_capacity=N]
 ```
 
-The parser validates that both hub names exist, that connections are not duplicated, and that exactly one `start_hub` and one `end_hub` are present. Errors raise a `ParsingError` with a descriptive message before any solving begins.
+The parser validates that both hub names exist, that connections are not duplicated, and that exactly one `start_hub` and one `end_hub` are present.
+
+Errors raise a `ParsingError` with a descriptive message before any solving begins.
 
 ---
 
@@ -193,6 +194,7 @@ For a restricted-zone map, in-transit moves appear in the format `D1-start-loop_
 ```
 fly-in/
 ├── src/
+│   ├── cli.py           # argparse to manage program arguments
 │   ├── models.py        # Pydantic data models (Hub, Edge, GraphModel, PathStep …)
 │   ├── parser.py        # Map file parser and validator
 │   ├── singlepath.py    # Time-expanded A* and path reconstruction
@@ -213,7 +215,7 @@ fly-in/
 
 ### Algorithms and theory
 
-- Sharon, G., Stern, R., Felner, A., & Sturtevant, N. (2015). Conflict-based search for optimal multi-agent pathfinding. *Artificial Intelligence*, 219, 40–66. — foundational CBS paper.
+- Sharon, G., Stern, R., Felner, A., & Sturtevant, N. (2015). [Conflict-based search for optimal multi-agent pathfinding](https://www.sciencedirect.com/science/article/pii/S0004370214001386)
 - Stern, R. et al. (2019). [Multi-Agent Pathfinding: Definitions, Variants, and Benchmarks](https://www.researchgate.net/publication/348716625_Survey_of_the_Multi-Agent_Pathfinding_Solutions) — MAPF survey covering CBS and related algorithms.
 - Red Blob Games — [Introduction to A\*](https://www.redblobgames.com/pathfinding/a-star/introduction.html) — accessible visual explanation of A* and heuristics.
 - [CBS algorithm — IIT Kanpur course material](https://www.cse.iitk.ac.in/users/cs365/2013/hw2/sharon-stern-12_multi-agent-path-finding-conflict-based.pdf)

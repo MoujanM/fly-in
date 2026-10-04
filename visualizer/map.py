@@ -86,8 +86,7 @@ class Map:
             s_end = renderer.world_to_camera(*p_end)
             pygame.draw.line(display_surface,
                              pygame.Color('white'), s_start, s_end, width=7)
-            if e.max_capacity > 1 or (e.hub_a.zone == 'restricted'
-                                    or e.hub_b.zone == 'restricted'):
+            if e.max_capacity > 1:
                 info_txt = self.font.render(f"cp: {e.max_capacity}",
                                             True, "darkblue", None)
                 info_rect = info_txt.get_rect(center=(

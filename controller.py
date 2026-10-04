@@ -28,6 +28,8 @@ class SimController:
         self.max_turn: int = max(self.turn_map.keys()) + 1
         self.delivered: set[str] = set()
         self._agent_positions: dict[str, str] = {}
+        self.goal: str = next(
+            h.name for h in graph.hubs if h.kind == "end_hub")
 
         start_name = next(h.name for h in graph.hubs if h.kind == "start_hub")
         for agent in self.agents:
@@ -134,12 +136,13 @@ class SimController:
             t for t in self.turn_map if t > self.current_turn]
         if not remaining_turns:
             for agent in self.agents:
-                self._agent_positions[agent] = "goal"
+                self._agent_positions[agent] = self.goal
             self.current_turn = self.max_turn
             # self.delivered = set(self.agents)
             return
         next_turn = min(remaining_turns)
         steps = self.get_turn_steps()
+
         for step in steps:
             if step.in_transit:
                 edge_name = f"{step.hub_from.name}-{step.hub_to.name}"

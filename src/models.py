@@ -39,7 +39,7 @@ class Hub(BaseModel):
     zone: Literal['normal', 'restricted',
                   'priority', 'blocked'] = Field(default='normal')
     color: str
-    max_drones: int | None
+    max_drones: int
 
     # @model_validator(mode='after')
     # def check_name(self) -> 'Hub':
@@ -66,13 +66,13 @@ class Edge(BaseModel):
 
     @staticmethod
     def canonical_name(hub1_name: str, hub2_name: str) -> str:
-        """Return a deterministic edge identifier regardless of traversal direction."""
+        """Return a deterministic edge identifier."""
         u, v = sorted([hub1_name, hub2_name])
         return f"{u}-{v}"
-        
+
     @model_validator(mode='after')
     def set_canonical_name(self) -> 'Edge':
-        """Ensure the Edge name attribute is always canonicalized upon creation."""
+        """Ensure the Edge name attribute is always canonicalized."""
         self.name = self.canonical_name(self.hub_a.name, self.hub_b.name)
         return self
 
@@ -92,7 +92,16 @@ class GraphModel(BaseModel):
 
     @model_validator(mode='after')
     def check_start_end(self) -> 'GraphModel':
+<<<<<<< HEAD
         """Check there are exactly one start hub and one end hub."""
+=======
+        """Require exactly one start hub and one end hub.
+        Returns:
+            This validated graph.
+        Raises:
+            ValueError: If the graph does not have one start and one end hub.
+        """
+>>>>>>> 58560ccf50be5fbe1cba8f00dce0998c8fcd058d
         if len([h for h in self.hubs if h.kind == 'start_hub']) != 1:
             raise ValueError("There must be exactly 1 start_hub")
         if len([h for h in self.hubs if h.kind == 'end_hub']) != 1:

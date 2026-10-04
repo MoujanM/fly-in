@@ -58,7 +58,8 @@ class PathFinder():
         return float(distance + tie_breaker)
 
     def _move_cost(self, h: Hub) -> int | None:
-        z_cost_lookup: dict[str, int] = {z.value[0]: z.value[1] for z in ZoneCost}
+        z_cost_lookup: dict[str, int] = {
+            z.value[0]: z.value[1] for z in ZoneCost}
         return z_cost_lookup.get(h.zone)
 
     def _build_path(self, agent_id: str,
@@ -152,12 +153,14 @@ class PathFinder():
                 # prefer priority zones, distinct from heuristic
                 actual_turns = turns
                 if h.zone == 'priority' and h != curr_hub:
-                    priority_discount = 0.001  # smaller than tie-breaker, larger than rounding error
-                    new_cost = cost_sum[(curr_hub.name, t)] + actual_turns - priority_discount
+                    priority_discount = 0.001
+                    new_cost = cost_sum[
+                        (curr_hub.name, t)] + actual_turns - priority_discount
                 else:
                     new_cost = cost_sum[(curr_hub.name, t)] + actual_turns
 
-                if new_state_key not in cost_sum or new_cost < cost_sum[new_state_key]:
+                if (new_state_key not in cost_sum or
+                        new_cost < cost_sum[new_state_key]):
                     cost_sum[new_state_key] = new_cost
                     f = new_cost + self._heuristic(h, v_goal_hub)
                     came_from[new_state_key] = current_state

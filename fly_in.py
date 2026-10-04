@@ -163,7 +163,7 @@ class FlyIn:
         if self._args.cost_per_agent:
             print("Cost per agent:")
             for agent, cost in control.result.cost_per_agent.items():
-                print(f"{agent}: {cost}")
+                print(f"{agent}: {int(round(cost))}")
         return None
 
 
