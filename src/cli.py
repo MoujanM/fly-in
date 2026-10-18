@@ -32,6 +32,10 @@ class CLIParser():
         self.parser.add_argument("-c", "--cost-per-agent",
                                  action="store_true",
                                  help="Print cost per agent")
+
+        self.parser.add_argument("-cp", "--capacity-info",
+                                 action="store_true",
+                                 help="Print cap info")
         return None
 
     def _parse(self) -> argparse.Namespace:

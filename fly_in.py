@@ -151,10 +151,16 @@ class FlyIn:
             None.
         """
         _ = call('clear' if os.name == 'posix' else 'cls')
-        for turn, desc in control.output.items():
-            for d in desc:
-                if d:
-                    print(d)
+
+        if self._args.capacity_info:
+            output = control.get_cp_info(self.graph)
+            for line in output:
+                print(line)
+        else:
+            for turn, desc in control.output.items():
+                for d in desc:
+                    if d:
+                        print(d)
 
         if self._args.verbose:
             print(f"Makespan: {control.result.makespan}")

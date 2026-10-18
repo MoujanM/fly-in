@@ -92,16 +92,7 @@ class GraphModel(BaseModel):
 
     @model_validator(mode='after')
     def check_start_end(self) -> 'GraphModel':
-<<<<<<< HEAD
         """Check there are exactly one start hub and one end hub."""
-=======
-        """Require exactly one start hub and one end hub.
-        Returns:
-            This validated graph.
-        Raises:
-            ValueError: If the graph does not have one start and one end hub.
-        """
->>>>>>> 58560ccf50be5fbe1cba8f00dce0998c8fcd058d
         if len([h for h in self.hubs if h.kind == 'start_hub']) != 1:
             raise ValueError("There must be exactly 1 start_hub")
         if len([h for h in self.hubs if h.kind == 'end_hub']) != 1:
@@ -137,27 +128,27 @@ class GraphModel(BaseModel):
         """
         if len(self.hubs) <= 1:
             return self
-    
+
         # Union-Find data structure
         parent: dict[str, str] = {h.name: h.name for h in self.hubs}
-    
+
         def find(hub_name: str) -> str:
             """Find the root of a hub's component."""
             if parent[hub_name] != hub_name:
                 parent[hub_name] = find(parent[hub_name])  # path compression
             return parent[hub_name]
-    
+
         def union(hub1: str, hub2: str) -> None:
             """Unite two hubs into the same component."""
             root1, root2 = find(hub1), find(hub2)
             if root1 != root2:
                 parent[root1] = root2
             return None
-    
+
         # Union all connected hubs via edges
         for edge in self.edges:
             union(edge.hub_a.name, edge.hub_b.name)
-    
+
         # Check if all hubs belong to the same component
         start = next(h.name for h in self.hubs if h.kind == "start_hub")
         end = next(h.name for h in self.hubs if h.kind == "end_hub")

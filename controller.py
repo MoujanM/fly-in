@@ -1,4 +1,4 @@
-from src.models import GraphModel, PathStep, CBSResult
+from src.models import GraphModel, PathStep, CBSResult, Edge
 
 
 class SimController:
@@ -169,3 +169,58 @@ class SimController:
         """
         return (f"Turn {self.current_turn} / {self.max_turn}"
                 f" (nb_agents: {len(self.agents)})")
+
+    def get_cp_info(self, graph) -> list[str]:
+        h_lookup = {h.name: h for h in graph.hubs}
+        e_lookup = {e.name: e for e in graph.edges}
+        delivered: set[str] = set()
+        lines = []
+        turn_map: dict[int, list[PathStep]] = {}
+        for agent, path in self.result.joint_plan.items():
+            for step in path:
+                turn_map.setdefault(step.t_depart, []).append(step)
+
+        for turn in sorted(turn_map.keys()):
+            moves = []
+            cap_info = {}
+
+            for step in self.turn_map[turn]:
+                if step.agent_id in delivered:
+                    continue
+                if step.hub_from == step.hub_to:
+                    continue
+                if step.in_transit:
+                    edge: str = Edge.canonical_name(
+                        step.hub_from.name, step.hub_to.name)
+                    moves.append(f"{step.agent_id}-{edge}")
+                else:
+                    moves.append(f"{step.agent_id}-{step.hub_to.name}")
+                if step.hub_to.kind == "end_hub" and not step.in_transit:
+                    delivered.add(step.agent_id)
+
+            positions = {}  # dict of position: list[agents]
+            for step in turn_map[turn]:
+                if step.agent_id not in delivered:
+                    if step.in_transit:
+                        edge: str = Edge.canonical_name(step.hub_from.name,
+                                                        step.hub_to.name)
+                        positions.setdefault(edge, []).append(step.agent_id)
+                    elif step.hub_to != step.hub_from:
+                        positions.setdefault(step.hub_to.name, []).append(
+                            step.agent_id)
+
+            for pos, agents in positions.items():
+                if pos in h_lookup.keys():
+                    max_cap = h_lookup[pos].max_drones
+                else:
+                    max_cap = e_lookup[pos].max_capacity
+                cap_info[pos] = f"\t{pos}: {len(agents)}/{max_cap}"
+
+            if moves:
+                lines.append(" ".join(moves))
+                lines.extend(cap_info.values())
+
+            if delivered == set(self.agents):
+                break
+
+        return lines
