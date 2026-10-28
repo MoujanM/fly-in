@@ -190,7 +190,7 @@ class PathStep:
     hub_to: Hub
     t_depart: int
     t_arrive: int   # adds turns
-    in_transit: bool = False
+    in_transit: bool = False    # late-edit: only for visualization
 
 
 @dataclass

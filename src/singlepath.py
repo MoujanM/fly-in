@@ -58,14 +58,18 @@ class PathFinder():
         return float(distance + tie_breaker)
 
     def _move_cost(self, h: Hub) -> int | None:
-        z_cost_lookup: dict[str, int] = {
+        z_cost_lookup: dict[str, int | None] = {
             z.value[0]: z.value[1] for z in ZoneCost}
-        return z_cost_lookup.get(h.zone)
+        return z_cost_lookup[h.zone]
 
     def _build_path(self, agent_id: str,
                     came_from: dict[tuple[str, int], tuple[Hub, int] | None],
                     goal_state: tuple[Hub, int]) -> list[PathStep]:
+
+        """ tuple[
+                list[PathStep], dict[str, list[tuple[str, int, int]]]]"""
         path: list[tuple[Hub, int]] = []
+        edge_occupancy: dict[str, list[tuple[str, int, int]]] = {}
         crumbs: tuple[Hub, int] | None = goal_state
         while crumbs is not None:
             path.append(crumbs)
@@ -79,6 +83,12 @@ class PathFinder():
             in_transit = is_moving and turns_taken == 2
             step = PathStep(agent_id, prev_s[0], curr_s[0],
                             prev_s[1], curr_s[1], in_transit)
+            if is_moving:
+                edge_name = Edge.canonical_name(prev_s[0].name, curr_s[0].name)
+                for t in range(prev_s[1], curr_s[1]):
+                    edge_occupancy.setdefault(edge_name, []).append(
+                        (agent_id, prev_s[1], curr_s[1])
+                    )
             path_steps.append(step)
         return path_steps
 
@@ -145,7 +155,7 @@ class PathFinder():
                 if new_state_key in forbidden:
                     continue
 
-                if h != curr_hub and turns == 2:
+                if h != curr_hub:
                     edge_name = Edge.canonical_name(h.name, curr_hub.name)
                     if any((edge_name, check_t) in forbidden
                            for check_t in range(t, new_t)):

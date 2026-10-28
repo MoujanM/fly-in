@@ -103,12 +103,10 @@ class CBS(PathFinder):
                 return Conflict(agents[0], agents[1], hub_name, t)
 
         # === Check edge capacity conflicts ===
-        # Edges are only used when in_transit=True
         edge_occupancy: dict[str, list[tuple[str, int, int]]] = {}
         for agent_id, steps in joint_plan.items():
             for step in steps:
-                if step.in_transit:
-                    # This agent traverses an edge from t_depart to t_arrive
+                if step.hub_from.name != step.hub_to.name:
                     edge_name = Edge.canonical_name(
                         step.hub_from.name, step.hub_to.name)
                     edge_occupancy.setdefault(edge_name, []).append(
@@ -189,7 +187,8 @@ class CBS(PathFinder):
                 agents_at_conflict = []
                 for agent, steps in node.all_paths.items():
                     for step in steps:
-                        if step.in_transit and (Edge.canonical_name(
+                        is_moving: bool = step.hub_from.name != step.hub_to.name
+                        if is_moving and (Edge.canonical_name(
                                 step.hub_from.name,
                                 step.hub_to.name) == conflict.position and
                                 step.t_depart <= conflict.time <
